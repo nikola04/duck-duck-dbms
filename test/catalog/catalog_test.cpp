@@ -216,3 +216,55 @@ TEST_F(CatalogTest, ConcurrentCreateTableProducesUniqueTables) {
     }
     EXPECT_EQ(catalog.all_tables().size(), static_cast<size_t>(kNumThreads));
 }
+
+TEST_F(CatalogTest, DropTableRemovesItFromCatalog) {
+    duck::DiskManager dm{test_file_};
+    duck::BufferPoolManager bpm{dm, 5};
+    duck::Catalog catalog{bpm, dm};
+
+    catalog.create_table("users", MakeUsersSchema());
+    EXPECT_TRUE(catalog.drop_table("users"));
+    EXPECT_FALSE(catalog.get_table("users").has_value());
+}
+
+TEST_F(CatalogTest, DropTableReturnsFalseWhenMissing) {
+    duck::DiskManager dm{test_file_};
+    duck::BufferPoolManager bpm{dm, 5};
+    duck::Catalog catalog{bpm, dm};
+
+    EXPECT_FALSE(catalog.drop_table("nonexistent"));
+}
+
+TEST_F(CatalogTest, DroppedTableDoesNotReappearAfterReopen) {
+    {
+        duck::DiskManager dm{test_file_};
+        duck::BufferPoolManager bpm{dm, 5};
+        duck::Catalog catalog{bpm, dm};
+
+        catalog.create_table("users", MakeUsersSchema());
+        catalog.create_table("cars", duck::Schema(std::vector<duck::Column>{
+                                         {"id", duck::TypeId::UINT64},
+                                     }));
+        catalog.drop_table("users");
+    }
+
+    duck::DiskManager dm2{test_file_};
+    duck::BufferPoolManager bpm2{dm2, 5};
+    duck::Catalog catalog2{bpm2, dm2};
+
+    EXPECT_FALSE(catalog2.get_table("users").has_value());
+    EXPECT_TRUE(catalog2.get_table("cars").has_value());
+}
+
+TEST_F(CatalogTest, CanRecreateTableAfterDrop) {
+    duck::DiskManager dm{test_file_};
+    duck::BufferPoolManager bpm{dm, 5};
+    duck::Catalog catalog{bpm, dm};
+
+    catalog.create_table("users", MakeUsersSchema());
+    catalog.drop_table("users");
+
+    // Should NOT throw "already exists" now that it's dropped
+    duck::Table* recreated = catalog.create_table("users", MakeUsersSchema());
+    ASSERT_NE(recreated, nullptr);
+}

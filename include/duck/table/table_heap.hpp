@@ -10,6 +10,8 @@
 
 namespace duck {
 
+enum class TableHeapFetchStatus { FAILED, SUCCESS };
+
 class TableHeap {
 public:
     TableHeap(PageID first_page_id, BufferPoolManager& bpm) : bpm_(bpm), first_page_id_(first_page_id) {
@@ -21,6 +23,9 @@ public:
     std::optional<std::vector<std::byte>> get_tuple(RID rid);
     std::optional<RID> update_tuple(RID rid, std::span<const std::byte> tuple);
     bool delete_tuple(RID rid);
+
+    std::pair<std::vector<PageID>, TableHeapFetchStatus> all_pages() const;
+    bool drop_page(PageID page_id);
 
     PageID first_page_id() const {
         return first_page_id_;

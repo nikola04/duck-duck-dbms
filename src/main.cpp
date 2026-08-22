@@ -24,11 +24,10 @@ int main() {
         duck::BufferPoolManager pool{disk_manager, 5};
 
         duck::Catalog catalog{pool, disk_manager};
-
-        // std::vector<duck::Column> columns{duck::Column{"id", duck::TypeId::UINT32},
-        //                                   duck::Column{"username", duck::TypeId::VARCHAR, 3000}};
-        // duck::Schema schema{columns};
-        // catalog.create_table("heap_test", schema);
+        std::vector<duck::Column> columns{duck::Column{"id", duck::TypeId::UINT32},
+                                          duck::Column{"username", duck::TypeId::VARCHAR, 3000}};
+        duck::Schema schema{columns};
+        catalog.create_table("heap_test", schema);
 
         // for (auto table : catalog.all_tables()) {
         //     std::println("{}\n{}\n", table->name(), table->schema().to_string());
@@ -43,12 +42,24 @@ int main() {
             auto values{std::vector<duck::Value>{duck::Value::of((std::uint32_t)1), duck::Value::of(std::move(s))}};
 
             duck::Tuple tuple{values, table.value()->schema()};
-            table.value()->update_tuple({3, 0}, tuple);
+            table.value()->insert_tuple(tuple);
+            // table.value()->update_tuple({3, 0}, tuple);
         }
 
-        duck::Table::Scan scan = table.value()->scan();
-        while (auto entry = scan.next()) {
-            std::println("RID: {}/{}", entry->first.page_id, entry->first.slot_num);
+        // duck::PinnedPage pinned{pool.fetch_page(8), &pool};
+        // bool status{catalog.drop_table("heap_test")};
+        // std::println("dropped table: {}", status);
+
+        if (table.has_value()) {
+            duck::Table::Scan scan = table.value()->scan();
+            while (auto entry = scan.next()) {
+                std::println("RID: {}/{}", entry->first.page_id, entry->first.slot_num);
+            }
+        }
+
+        {
+            bool status{catalog.drop_table("heap_test")};
+            std::println("dropped table: {}", status);
         }
 
         // duck::TableHeap heap{duck::TableHeap::create(pool)};

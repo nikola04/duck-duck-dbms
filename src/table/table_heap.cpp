@@ -171,6 +171,30 @@ bool TableHeap::delete_tuple(RID rid) {
     return false;
 }
 
+std::pair<std::vector<PageID>, TableHeapFetchStatus> TableHeap::all_pages() const {
+    std::vector<PageID> result{};
+
+    PageID page_id{first_page_id_};
+    while (Page * page{bpm_.fetch_page(page_id)}) {
+        PinnedPage pinned{page, &bpm_};
+        std::shared_lock<std::shared_mutex> lock{page->latch()};
+
+        SlottedPage slotted{page->data()};
+
+        result.push_back(page_id);
+
+        if (page_id = slotted.next_page(); page_id == INVALID_PAGE_ID)
+            return {result, TableHeapFetchStatus::SUCCESS};
+    }
+
+    // fetch failed, did not reach next_page_id == INVALID_PAGE
+    return {result, TableHeapFetchStatus::FAILED};
+}
+
+bool TableHeap::drop_page(PageID page_id) {
+    return bpm_.delete_page(page_id);
+}
+
 TableHeap::Scan TableHeap::scan() const {
     return {first_page_id_, &bpm_};
 }

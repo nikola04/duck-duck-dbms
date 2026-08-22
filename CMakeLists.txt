@@ -88,9 +88,12 @@ if(DUCK_BUILD_TESTS)
       test/buffer/buffer_pool_manager_test.cpp
       test/table/slotted_page_test.cpp
       test/table/table_heap_test.cpp
+      test/table/table_drop_pages_test.cpp
+      test/table/table_heap_drop_page_test.cpp
       test/tuple/tuple_test.cpp
       test/tuple/schema_column_test.cpp
       test/catalog/catalog_test.cpp
+      test/catalog/catalog_drop_table_test.cpp
   )
   target_link_libraries(duck_tests PRIVATE duck_catalog GTest::gtest_main)
   include(GoogleTest)

@@ -7,10 +7,12 @@
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/value.hpp"
+#include <cstddef>
 #include <format>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <print>
 #include <shared_mutex>
 #include <stdexcept>
 #include <vector>
@@ -46,7 +48,8 @@ Table* Catalog::create_table(const std::string name, Schema schema) {
     Tuple entry({std::vector<Value>{Value::of(name), Value::of(heap.first_page_id()), Value::of(schema.serialize())},
                  catalog_schema_});
 
-    if (!catalog_table_.insert_tuple(entry).has_value()) {
+    auto rid{catalog_table_.insert_tuple(entry)};
+    if (!rid.has_value()) {
         throw std::runtime_error("Catalog::CreateTable: failed to write catalog entry");
     }
 
@@ -54,17 +57,44 @@ Table* Catalog::create_table(const std::string name, Schema schema) {
     auto table_ptr{std::make_unique<Table>(name, std::move(heap), *schema_ptr)};
 
     Table* result = table_ptr.get();
-    tables_[name] = TableEntry{std::move(schema_ptr), std::move(table_ptr)};
+    tables_[name] = TableEntry{rid.value(), std::move(schema_ptr), std::move(table_ptr)};
 
     return result;
 }
 
-std::optional<Table*> Catalog::get_table(const std::string& name) {
+std::optional<Table*> Catalog::get_table(const std::string& name) const {
     std::shared_lock<std::shared_mutex> lock{latch_};
     if (auto it{tables_.find(name)}; it != tables_.end()) {
         return it->second.table.get();
     }
     return std::nullopt;
+}
+
+bool Catalog::drop_table(const std::string& name) {
+    std::unique_lock<std::shared_mutex> lock{latch_};
+
+    auto it{tables_.find(name)};
+    if (it == tables_.end())
+        return false;
+
+    if (auto deleted{catalog_table_.delete_tuple(it->second.rid)}; !deleted) {
+        return false;
+    }
+
+    auto [failed_pages, drop_status]{it->second.table->drop_pages()};
+    switch (drop_status) {
+    case DropTableStatus::READ_PAGES_FAILED:
+        throw std::runtime_error("Catalog::drop_table: Table::drop_pages failed to fetch all pages before deletion");
+    case DropTableStatus::SUCCESS:
+        break;
+    }
+
+    if (failed_pages > 0)
+        std::println("Catalog::drop_table: failed to drop {} pages", failed_pages); // or log somewhere idk...
+
+    tables_.erase(it);
+
+    return true;
 }
 
 std::vector<Table*> Catalog::all_tables() const {
@@ -92,7 +122,7 @@ void Catalog::load_existing_tables() {
         auto schema{std::make_unique<Schema>(tuple.get(2).as_bytes())};
         auto table_ptr{std::make_unique<Table>(table_name, TableHeap{first_page_id, bpm_}, *schema)};
 
-        tables_[table_name] = TableEntry{std::move(schema), std::move(table_ptr)};
+        tables_[table_name] = TableEntry{entry->first, std::move(schema), std::move(table_ptr)};
     }
 }
 

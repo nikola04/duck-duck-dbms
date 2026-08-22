@@ -1,5 +1,8 @@
 #include "duck/table/table.hpp"
+#include "duck/common/types.hpp"
+#include "duck/table/table_heap.hpp"
 #include "duck/tuple/tuple.hpp"
+#include <cstddef>
 #include <optional>
 #include <stdexcept>
 
@@ -33,6 +36,21 @@ std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple) {
         throw std::runtime_error("Table::update_tuple: schemas not compatible");
 
     return table_heap_.update_tuple(rid, tuple.serialize());
+}
+
+std::pair<size_t, DropTableStatus> Table::drop_pages() {
+    size_t failed{0};
+
+    auto [page_ids, status]{table_heap_.all_pages()};
+    if (status == TableHeapFetchStatus::FAILED) // because we cannot be sure how many pages are left to fail we abort
+        return {0, DropTableStatus::READ_PAGES_FAILED};
+
+    for (PageID page_id : page_ids) {
+        if (!table_heap_.drop_page(page_id))
+            failed++;
+    }
+
+    return {failed, DropTableStatus::SUCCESS};
 }
 
 Table::Scan Table::scan() const {
