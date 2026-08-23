@@ -4,12 +4,19 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <mutex>
 #include <span>
 #include <string>
 #include <vector>
 
 namespace duck {
+
+struct DiskHeader {
+    std::uint64_t magic;
+    std::uint64_t version;
+    std::size_t free_list_size;
+};
 
 class DiskManager {
 public:
@@ -31,6 +38,7 @@ public:
 private:
     const std::string path_;
     const int fd_;
+    DiskHeader disk_header_;
 
     std::atomic<PageID> capacity_{0};
 
@@ -38,6 +46,11 @@ private:
     std::mutex free_list_mutex{};
 
     off_t get_size() const;
+
+    DiskHeader read_header();
+    void read_free_list();
+
+    void flush_meta();
 };
 
 } // namespace duck
