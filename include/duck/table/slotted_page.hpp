@@ -9,7 +9,7 @@
 
 namespace duck {
 
-inline constexpr std::uint16_t INVALID_SLOT_OFFSET = 0;
+inline constexpr std::uint16_t INVALID_SLOT_OFFSET{0};
 
 struct [[gnu::packed]] PageHeader {
     PageID next_page_id;

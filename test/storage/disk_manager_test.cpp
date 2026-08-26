@@ -7,7 +7,7 @@
 
 class DiskManagerTest : public ::testing::Test {
 protected:
-    std::string test_file_ = "disk_manager_test.db";
+    std::string test_file_ = "disk_test.db";
 
     void SetUp() override {
         std::remove(test_file_.c_str());
@@ -78,11 +78,11 @@ TEST_F(DiskManagerTest, MultiplePagesDontOverlap) {
 TEST_F(DiskManagerTest, CapacityGrowsWithAllocation) {
     duck::DiskManager dm{test_file_};
 
-    EXPECT_EQ(dm.capacity(), 0u);
-    dm.allocate_page();
     EXPECT_EQ(dm.capacity(), 1u);
     dm.allocate_page();
     EXPECT_EQ(dm.capacity(), 2u);
+    dm.allocate_page();
+    EXPECT_EQ(dm.capacity(), 3u);
 }
 
 TEST_F(DiskManagerTest, ReadWriteOutOfBoundsThrows) {
@@ -104,23 +104,24 @@ TEST_F(DiskManagerTest, DeallocatedPageIsReused) {
     size_t p1 = dm.allocate_page();
 
     EXPECT_EQ(p0, p1);
-    EXPECT_EQ(dm.capacity(), 1u);
+    EXPECT_EQ(dm.capacity(), 2u);
 }
 
 TEST_F(DiskManagerTest, PersistsAcrossReopen) {
+    size_t page_id;
     {
         duck::DiskManager dm{test_file_};
-        size_t page_id = dm.allocate_page();
+        page_id = dm.allocate_page();
 
         std::byte buf[duck::kPAGE_SIZE] = {};
         std::memcpy(buf, "persisted", 9);
         dm.write_page(page_id, buf);
     }
     duck::DiskManager dm2{test_file_};
-    EXPECT_EQ(dm2.capacity(), 1u);
+    EXPECT_EQ(dm2.capacity(), 2u);
 
     std::byte read_buf[duck::kPAGE_SIZE] = {};
-    dm2.read_page(0, read_buf);
+    dm2.read_page(page_id, read_buf);
     EXPECT_EQ(std::memcmp(read_buf, "persisted", 9), 0);
 }
 

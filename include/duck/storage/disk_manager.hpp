@@ -1,5 +1,6 @@
 #pragma once
 
+#include "duck/common/config.hpp"
 #include "duck/common/types.hpp"
 
 #include <atomic>
@@ -12,10 +13,10 @@
 
 namespace duck {
 
-struct DiskHeader {
+struct [[gnu::packed]] DiskHeader {
     std::uint64_t magic;
     std::uint64_t version;
-    std::size_t free_list_size;
+    std::uint64_t free_list_size;
 };
 
 class DiskManager {
@@ -38,7 +39,7 @@ public:
 private:
     const std::string path_;
     const int fd_;
-    DiskHeader disk_header_;
+    DiskHeader disk_header_{kDB_MAGIC, kDB_FORMAT_VERSION, 0};
 
     std::atomic<PageID> capacity_{0};
 
@@ -47,10 +48,7 @@ private:
 
     off_t get_size() const;
 
-    DiskHeader read_header();
-    void read_free_list();
-
-    void flush_meta();
+    void init_header();
 };
 
 } // namespace duck

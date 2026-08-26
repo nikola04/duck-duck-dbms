@@ -1,16 +1,23 @@
 #include "duck/storage/disk_manager.hpp"
+#include "duck/common/config.hpp"
+#include "duck/common/types.hpp"
+#include "duck/config/defaults.hpp"
 #include "duck/config/sizes.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cstddef>
 #include <cstring>
 #include <fcntl.h>
 #include <format>
 #include <mutex>
+#include <print>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <vector>
 
 namespace duck {
 
@@ -24,6 +31,18 @@ DiskManager::DiskManager(std::string path)
     if (off_t size{get_size()}; size > 0) {
         capacity_ = size / kPAGE_SIZE;
     }
+
+    if (capacity_ == 0) {
+        allocate_page();
+        flush_all();
+    } else
+        init_header();
+
+    if (disk_header_.magic != kDB_MAGIC)
+        throw std::runtime_error("DiskManager::DiskManager: Database file is not recognized by DUCKDB.");
+
+    if (disk_header_.version != kDB_FORMAT_VERSION)
+        throw std::runtime_error("DiskManager::DiskManager: Database file version not supported.");
 }
 
 DiskManager::~DiskManager() {
@@ -45,14 +64,30 @@ PageID DiskManager::allocate_page() {
 }
 
 void DiskManager::deallocate_page(PageID page_id) {
+    if (page_id == kDISK_METADATA_PAGE_ID)
+        throw std::runtime_error("DiskManager::deallocate_page: deallocating disk meta page is not allowed");
+
     std::lock_guard lock{free_list_mutex};
+
+    if (free_list_.size() > 1024) {
+        std::println(
+            "WARNING - DiskManager::deallocate_page: free list size exceeds 1024 and deallocated page wont be reused");
+        return;
+    }
+
     free_list_.push_back(page_id);
 }
 
 void DiskManager::flush_all() {
     std::lock_guard lock{free_list_mutex};
 
-    // should save all meta(free list) to disk
+    // write header
+    disk_header_.free_list_size = free_list_.size();
+    auto header_ptr{static_cast<void*>(&disk_header_)};
+    pwrite(fd_, header_ptr, sizeof(DiskHeader), 0);
+
+    // write list
+    pwrite(fd_, free_list_.data(), free_list_.size() * sizeof(PageID), sizeof(DiskHeader));
 }
 
 void DiskManager::write_page(PageID page_id, std::span<const std::byte> buffer) {
@@ -98,6 +133,17 @@ off_t DiskManager::get_size() const {
         return -1;
     }
     return sb.st_size;
+}
+
+void DiskManager::init_header() {
+    std::vector<std::byte> buffer(kPAGE_SIZE);
+    read_page(kDISK_METADATA_PAGE_ID, buffer);
+
+    disk_header_ =
+        std::bit_cast<DiskHeader>(*reinterpret_cast<std::array<std::byte, sizeof(DiskHeader)>*>(buffer.data()));
+
+    free_list_.resize(disk_header_.free_list_size);
+    std::memcpy(free_list_.data(), buffer.data() + sizeof(DiskHeader), disk_header_.free_list_size * sizeof(PageID));
 }
 
 } // namespace duck

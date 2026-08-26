@@ -31,7 +31,7 @@ Catalog::Catalog(BufferPoolManager& bpm, DiskManager& disk_manager)
 }
 
 Table Catalog::init_table() {
-    if (disk_manager_.capacity() == 0) {
+    if (disk_manager_.capacity() <= kCATALOG_FIRST_PAGE_ID) {
         return Table{"duck_catalog_", duck::TableHeap::create(bpm_), catalog_schema_};
     }
     TableHeap heap{kCATALOG_FIRST_PAGE_ID, bpm_};
