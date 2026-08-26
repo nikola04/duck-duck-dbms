@@ -89,10 +89,14 @@ std::optional<RID> TableHeap::insert_tuple(std::span<const std::byte> tuple_data
             if (slotted.next_page() == INVALID_PAGE_ID) {
                 slotted.set_next_page(next_page->page_id());
                 pinned.mark_dirty();
+            } else {
+                PageID next_id{slotted.next_page()};
+                lock.unlock();
+
+                bpm_.delete_page(next_page->page_id()); // deallocate it
+                page_id = next_id;
+                continue;
             }
-            // else: someone else already linked a page. Our new page is now orphaned —
-            // for v1, we simply leak it (acceptable tradeoff, documented as known limitation).
-            // A fuller fix would return it to disk_manager_'s free list via deallocate_page.
         }
 
         page_id = slotted.next_page();
