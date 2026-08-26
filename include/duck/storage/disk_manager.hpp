@@ -16,6 +16,7 @@ namespace duck {
 struct [[gnu::packed]] DiskHeader {
     std::uint64_t magic;
     std::uint64_t version;
+    std::uint64_t capacity;
     std::uint64_t free_list_size;
 };
 
@@ -39,7 +40,7 @@ public:
 private:
     const std::string path_;
     const int fd_;
-    DiskHeader disk_header_{kDB_MAGIC, kDB_FORMAT_VERSION, 0};
+    DiskHeader disk_header_{kDB_MAGIC, kDB_FORMAT_VERSION, 0, 0};
 
     std::atomic<PageID> capacity_{0};
 

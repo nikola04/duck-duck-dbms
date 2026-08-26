@@ -28,15 +28,14 @@ DiskManager::DiskManager(std::string path)
         throw std::invalid_argument("Disk file failed to open: " + path_);
     }
 
-    if (off_t size{get_size()}; size > 0) {
-        capacity_ = size / kPAGE_SIZE;
-    }
-
-    if (capacity_ == 0) {
+    if (off_t size{get_size()}; size / kPAGE_SIZE < 1) {
+        capacity_ = 0;
         allocate_page();
         flush_all();
-    } else
+    } else {
+        capacity_ = 1;
         init_header();
+    }
 
     if (disk_header_.magic != kDB_MAGIC)
         throw std::runtime_error("DiskManager::DiskManager: Database file is not recognized by DUCKDB.");
@@ -82,7 +81,9 @@ void DiskManager::flush_all() {
     std::lock_guard lock{free_list_mutex};
 
     // write header
+    disk_header_.capacity = capacity_;
     disk_header_.free_list_size = free_list_.size();
+
     auto header_ptr{static_cast<void*>(&disk_header_)};
     pwrite(fd_, header_ptr, sizeof(DiskHeader), 0);
 
@@ -141,6 +142,8 @@ void DiskManager::init_header() {
 
     disk_header_ =
         std::bit_cast<DiskHeader>(*reinterpret_cast<std::array<std::byte, sizeof(DiskHeader)>*>(buffer.data()));
+
+    capacity_ = disk_header_.capacity;
 
     free_list_.resize(disk_header_.free_list_size);
     std::memcpy(free_list_.data(), buffer.data() + sizeof(DiskHeader), disk_header_.free_list_size * sizeof(PageID));

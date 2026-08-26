@@ -26,14 +26,14 @@ int main() {
         duck::Catalog catalog{pool, disk_manager};
         std::vector<duck::Column> columns{duck::Column{"id", duck::TypeId::UINT32},
                                           duck::Column{"username", duck::TypeId::VARCHAR, 3000}};
-        // duck::Schema schema{columns};
-        // catalog.create_table("heap_test", schema);
+        duck::Schema schema{columns};
+        catalog.create_table("heap_test3", schema);
 
         for (auto table : catalog.all_tables()) {
             std::println("{}\n{}\n", table->name(), table->schema().to_string());
         }
 
-        auto table{catalog.get_table("heap_test")};
+        auto table{catalog.get_table("heap_test3")};
         if (table.has_value()) {
             std::println("{}\n{}\n", table.value()->name(), table.value()->schema().to_string());
 
@@ -58,7 +58,7 @@ int main() {
         }
 
         // {
-        //     bool status{catalog.drop_table("heap_test")};
+        //     bool status{catalog.drop_table("heap_test3")};
         //     std::println("dropped table: {}", status);
         // }
 
