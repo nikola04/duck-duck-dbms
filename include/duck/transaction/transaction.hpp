@@ -6,7 +6,7 @@
 
 namespace duck {
 
-enum class TransactionState { GROWING, SHRINKING, COMMITED, ABORTED };
+enum class TransactionState { GROWING, SHRINKING, COMMITTED, ABORTED };
 
 class Transaction {
 public:

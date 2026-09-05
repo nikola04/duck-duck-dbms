@@ -21,9 +21,10 @@ std::optional<RID> Table::insert_tuple(const Tuple& tuple, Transaction* tx) {
     if (!rid.has_value())
         return std::nullopt;
 
-    if (tx != nullptr && !lock_manager_.lock_exclusive(
-                             tx, rid.value())) // lock failed but data already written, should be done secured on another layer
+    if (tx != nullptr && !lock_manager_.lock_exclusive(tx, *rid)) {
+        table_heap_.delete_tuple(*rid); // rollback, but insert could be overwritten...
         return std::nullopt;
+    }
 
     return rid;
 }
@@ -53,7 +54,16 @@ std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple, Transaction*
     if (tx != nullptr && !lock_manager_.lock_exclusive(tx, rid))
         return std::nullopt;
 
-    return table_heap_.update_tuple(rid, tuple.serialize());
+    auto ret_rid{table_heap_.update_tuple(rid, tuple.serialize())};
+    if (!ret_rid.has_value())
+        return std::nullopt;
+
+    // same issue as insert, rid is unknown
+    // if (*ret_rid != rid && tx != nullptr && !lock_manager_.lock_exclusive(tx, *ret_rid)) {
+    //     return std::nullopt;
+    // }
+
+    return ret_rid;
 }
 
 std::pair<size_t, DropTableStatus> Table::drop_pages() {

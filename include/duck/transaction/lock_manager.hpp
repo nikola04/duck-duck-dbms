@@ -33,7 +33,6 @@ private:
     std::unordered_map<RID, LockRequestQueue> lock_table_;
 
     bool can_grant(const LockRequestQueue& queue, const LockRequest& request);
-    void mark_granted(LockRequestQueue& queue, TransactionID tx_id);
     void remove_and_notify(RID rid, TransactionID tx_id);
 };
 

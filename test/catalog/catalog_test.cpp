@@ -93,7 +93,7 @@ TEST_F(CatalogTest, CreateAndInsertRoundTrip) {
 
     duck::Table* table = catalog.create_table("users", MakeUsersSchema());
 
-    duck::Transaction* txn = txn_manager.begin();
+    auto txn = txn_manager.begin();
 
     duck::Tuple row(
         {
@@ -103,16 +103,16 @@ TEST_F(CatalogTest, CreateAndInsertRoundTrip) {
         },
         table->schema());
 
-    auto rid = table->insert_tuple(row, txn);
+    auto rid = table->insert_tuple(row, txn.get());
     ASSERT_TRUE(rid.has_value());
 
-    auto fetched = table->get_tuple(*rid, txn);
+    auto fetched = table->get_tuple(*rid, txn.get());
     ASSERT_TRUE(fetched.has_value());
     EXPECT_EQ(fetched->get(0).as_uint32(), 1u);
     EXPECT_EQ(fetched->get(1).as_string(), "alice");
     EXPECT_EQ(fetched->get(2).as_bool(), true);
 
-    txn_manager.commit(txn);
+    txn_manager.commit(txn.get());
 }
 
 TEST_F(CatalogTest, AllTablesReturnsEveryCreatedTable) {
@@ -149,7 +149,7 @@ TEST_F(CatalogTest, PersistsAcrossReopen) {
 
         duck::Table* table = catalog.create_table("users", MakeUsersSchema());
 
-        duck::Transaction* txn = txn_manager.begin();
+        auto txn = txn_manager.begin();
         duck::Tuple row(
             {
                 duck::Value::of(static_cast<std::uint32_t>(42)),
@@ -157,8 +157,8 @@ TEST_F(CatalogTest, PersistsAcrossReopen) {
                 duck::Value::of(false),
             },
             table->schema());
-        table->insert_tuple(row, txn);
-        txn_manager.commit(txn);
+        table->insert_tuple(row, txn.get());
+        txn_manager.commit(txn.get());
     } // everything goes out of scope, BPM destructor flushes
 
     duck::DiskManager dm2{test_file_};

@@ -47,15 +47,15 @@ TEST_F(TableDropPagesTest, DropPagesReturnsZeroWhenNothingPinned) {
     duck::Schema schema = MakeSimpleSchema();
     duck::Table table{"t", duck::TableHeap::create(bpm), schema, lock_manager};
 
-    duck::Transaction* txn = txn_manager.begin();
+    auto txn = txn_manager.begin();
 
     std::string big_value(500, 'x');
     for (int i = 0; i < 20; ++i) {
         duck::Tuple row({duck::Value::of(static_cast<std::uint32_t>(i))}, schema);
-        table.insert_tuple(row, txn);
+        table.insert_tuple(row, txn.get());
     }
 
-    txn_manager.commit(txn); // pusti lock-ove pre nego što probaš da obrišeš stranice
+    txn_manager.commit(txn.get()); // pusti lock-ove pre nego što probaš da obrišeš stranice
 
     auto [failed_count, status] = table.drop_pages();
     EXPECT_EQ(status, duck::DropTableStatus::SUCCESS);
@@ -71,10 +71,10 @@ TEST_F(TableDropPagesTest, DropPagesCountsPinnedPagesAsFailed) {
     duck::Schema schema = MakeSimpleSchema();
     duck::Table table{"t", duck::TableHeap::create(bpm), schema, lock_manager};
 
-    duck::Transaction* txn = txn_manager.begin();
+    auto txn = txn_manager.begin();
     duck::Tuple row({duck::Value::of(static_cast<std::uint32_t>(1))}, schema);
-    table.insert_tuple(row, txn);
-    txn_manager.commit(txn);
+    table.insert_tuple(row, txn.get());
+    txn_manager.commit(txn.get());
 
     // Pin the only page manually to simulate a concurrent reader still holding it.
     duck::Page* page = bpm.fetch_page(table.table_heap()->first_page_id());

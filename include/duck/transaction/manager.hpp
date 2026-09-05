@@ -15,7 +15,7 @@ public:
     TransactionManager(LockManager& lock_manager) : lock_manager_(lock_manager) {
     }
 
-    Transaction* begin();
+    std::shared_ptr<Transaction> begin();
     void commit(Transaction* tx);
     void abort(Transaction* tx);
 
@@ -23,7 +23,7 @@ private:
     LockManager& lock_manager_;
 
     std::atomic<TransactionID> next_tx_id_{0};
-    std::unordered_map<TransactionID, std::unique_ptr<Transaction>> active_txs_;
+    std::unordered_map<TransactionID, std::shared_ptr<Transaction>> active_txs_;
 
     std::shared_mutex latch_;
 };
