@@ -4,9 +4,11 @@
 #include "duck/config/defaults.hpp"
 #include "duck/table/table.hpp"
 #include "duck/table/table_heap.hpp"
+#include "duck/transaction/undo.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/value.hpp"
+#include <cassert>
 #include <cstddef>
 #include <format>
 #include <memory>
@@ -59,25 +61,20 @@ Table* Catalog::create_table(const std::string name, Schema schema, Transaction*
     Table* result = table_ptr.get();
     tables_[name] = TableEntry{rid.value(), std::move(schema_ptr), std::move(table_ptr)};
 
+    if (tx != nullptr)
+        tx->push_undo(std::make_unique<DropTableUndoRecord>(this, name));
+
     return result;
 }
 
-std::optional<Table*> Catalog::get_table(const std::string& name) const {
-    std::shared_lock<std::shared_mutex> lock{latch_};
-    if (auto it{tables_.find(name)}; it != tables_.end()) {
-        return it->second.table.get();
-    }
-    return std::nullopt;
-}
-
-bool Catalog::drop_table(const std::string& name, Transaction* tx) {
+bool Catalog::drop_table(const std::string& name) {
     std::unique_lock<std::shared_mutex> lock{latch_};
 
     auto it{tables_.find(name)};
     if (it == tables_.end())
         return false;
 
-    if (auto deleted{catalog_table_.delete_tuple(it->second.rid, tx)}; !deleted) {
+    if (auto deleted{catalog_table_.delete_tuple(it->second.rid)}; !deleted) {
         return false;
     }
 
@@ -95,6 +92,34 @@ bool Catalog::drop_table(const std::string& name, Transaction* tx) {
     tables_.erase(it);
 
     return true;
+}
+
+void Catalog::delete_table(const std::string name) {
+    std::unique_lock<std::shared_mutex> lock{latch_};
+
+    auto it{tables_.find(name)};
+    assert(it != tables_.end());
+
+    auto [failed_pages, drop_status]{it->second.table->drop_pages()};
+    switch (drop_status) {
+    case DropTableStatus::READ_PAGES_FAILED:
+        throw std::runtime_error("Catalog::delete_table: Table::drop_pages failed to fetch all pages before deletion");
+    case DropTableStatus::SUCCESS:
+        break;
+    }
+
+    if (failed_pages > 0)
+        std::println("Catalog::delete_table: failed to drop {} pages", failed_pages); // or log somewhere idk...
+
+    tables_.erase(it);
+}
+
+std::optional<Table*> Catalog::get_table(const std::string& name) const {
+    std::shared_lock<std::shared_mutex> lock{latch_};
+    if (auto it{tables_.find(name)}; it != tables_.end()) {
+        return it->second.table.get();
+    }
+    return std::nullopt;
 }
 
 std::vector<Table*> Catalog::all_tables() const {

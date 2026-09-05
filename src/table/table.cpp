@@ -2,8 +2,10 @@
 #include "duck/common/types.hpp"
 #include "duck/table/table_heap.hpp"
 #include "duck/transaction/lock_manager.hpp"
+#include "duck/transaction/undo.hpp"
 #include "duck/tuple/tuple.hpp"
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 
@@ -26,6 +28,9 @@ std::optional<RID> Table::insert_tuple(const Tuple& tuple, Transaction* tx) {
         return std::nullopt;
     }
 
+    if (tx != nullptr)
+        tx->push_undo(std::make_unique<DeleteUndoRecord>(this, *rid));
+
     return rid;
 }
 
@@ -44,7 +49,17 @@ bool Table::delete_tuple(RID rid, Transaction* tx) {
     if (tx != nullptr && !lock_manager_.lock_exclusive(tx, rid))
         return false;
 
-    return table_heap_.delete_tuple(rid);
+    auto bytes{table_heap_.get_tuple(rid)};
+    if (!bytes.has_value())
+        return false;
+
+    if (!table_heap_.delete_tuple(rid))
+        return false;
+
+    if (tx != nullptr)
+        tx->push_undo(std::make_unique<RestoreUndoRecord>(this, rid, *bytes));
+
+    return true;
 }
 
 std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple, Transaction* tx) {
@@ -54,15 +69,25 @@ std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple, Transaction*
     if (tx != nullptr && !lock_manager_.lock_exclusive(tx, rid))
         return std::nullopt;
 
+    auto old_tuple_bytes{table_heap_.get_tuple(rid)};
+    if (!old_tuple_bytes.has_value()) // no data to be updated
+        return std::nullopt;
+
     auto ret_rid{table_heap_.update_tuple(rid, tuple.serialize())};
     if (!ret_rid.has_value())
         return std::nullopt;
 
-    // same issue as insert, rid is unknown
     if (*ret_rid != rid && tx != nullptr) {
-        if (!lock_manager_.lock_exclusive(tx, *ret_rid)) {
+        if (!lock_manager_.lock_exclusive(tx, *ret_rid)) // same issue as insert, rid is unknown
             return std::nullopt;
-        }
+    }
+
+    if (tx != nullptr) {
+        tx->push_undo(std::make_unique<RestoreUndoRecord>(this, rid, *old_tuple_bytes));
+        if (*ret_rid != rid)
+            tx->push_undo(std::make_unique<DeleteUndoRecord>(this, *ret_rid));
+        else
+            tx->push_undo(std::make_unique<DeleteUndoRecord>(this, rid));
     }
 
     return ret_rid;

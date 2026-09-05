@@ -27,9 +27,11 @@ public:
     Catalog(BufferPoolManager& bpm, DiskManager& disk_manager, LockManager& lock_manager);
 
     Table* create_table(const std::string name, Schema schema, Transaction* tx = nullptr);
-    std::optional<Table*> get_table(const std::string& name) const;
-    bool drop_table(const std::string& name, Transaction* tx = nullptr);
+    bool drop_table(const std::string& name);
 
+    void delete_table(const std::string name);
+
+    std::optional<Table*> get_table(const std::string& name) const;
     std::vector<Table*> all_tables() const;
 
 private:

@@ -175,6 +175,16 @@ bool TableHeap::delete_tuple(RID rid) {
     return false;
 }
 
+void TableHeap::restore_tuple(RID rid, std::span<const std::byte> tuple) {
+    if (Page* page{bpm_.fetch_page(rid.page_id)}; page != nullptr) {
+        PinnedPage pinned{page, &bpm_};
+        std::unique_lock<std::shared_mutex> lock{page->latch()};
+
+        SlottedPage slotted{page->data()};
+        slotted.restore_tuple(rid.slot_num, tuple);
+    }
+}
+
 std::pair<std::vector<PageID>, TableHeapFetchStatus> TableHeap::all_pages() const {
     std::vector<PageID> result{};
 

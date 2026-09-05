@@ -5,6 +5,7 @@
 #include <list>
 #include <mutex>
 #include <unordered_map>
+
 namespace duck {
 
 enum class LockMode { SHARED, EXCLUSIVE };

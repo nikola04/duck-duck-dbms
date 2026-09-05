@@ -3,6 +3,7 @@
 #include "duck/config/sizes.hpp"
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -45,8 +46,8 @@ std::uint16_t SlottedPage::allocate_slot() {
 
 std::optional<RID> SlottedPage::insert_tuple(std::span<const std::byte> tuple_data,
                                              std::optional<std::uint16_t> prefered_slot) {
-    int16_t available_space = free_space_bytes();
-    uint16_t tuple_size = static_cast<uint16_t>(tuple_data.size_bytes());
+    int32_t available_space{free_space_bytes()};
+    uint16_t tuple_size{static_cast<uint16_t>(tuple_data.size_bytes())};
 
     if (available_space < tuple_size)
         return std::nullopt;
@@ -115,6 +116,21 @@ bool SlottedPage::delete_tuple(std::uint16_t slot_num) {
 
     slots_[slot_num].offset = INVALID_SLOT_OFFSET;
     return true;
+}
+
+void SlottedPage::restore_tuple(std::uint16_t slot_num, std::span<const std::byte> tuple_data) {
+    assert(slot_num < header_->slot_count);
+
+    Slot& slot{slots_[slot_num]};
+    assert(slot.offset == INVALID_SLOT_OFFSET);
+
+    if (uint16_t tuple_size{static_cast<uint16_t>(tuple_data.size_bytes())}; free_space_bytes() < tuple_size) {
+        compact();
+        assert(tuple_size <= free_space_bytes());
+    }
+
+    bool inserted{insert_tuple(tuple_data, slot_num).has_value()};
+    assert(inserted);
 }
 
 bool SlottedPage::is_compacted() const {

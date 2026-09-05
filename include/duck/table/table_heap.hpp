@@ -23,6 +23,7 @@ public:
     std::optional<std::vector<std::byte>> get_tuple(RID rid);
     std::optional<RID> update_tuple(RID rid, std::span<const std::byte> tuple);
     bool delete_tuple(RID rid);
+    void restore_tuple(RID rid, std::span<const std::byte> tuple);
 
     std::pair<std::vector<PageID>, TableHeapFetchStatus> all_pages() const;
     bool drop_page(PageID page_id);

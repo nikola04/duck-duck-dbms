@@ -3,12 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "duck/buffer/pool_manager.hpp"
-#include "duck/catalog/catalog.hpp"
-#include "duck/storage/disk_manager.hpp"
+#include "duck/database/database.hpp"
 #include "duck/table/table.hpp"
-#include "duck/transaction/lock_manager.hpp"
-#include "duck/transaction/manager.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/tuple.hpp"
 #include <cstddef>
@@ -19,31 +15,30 @@
 
 int main() {
     try {
-        duck::DiskManager disk_manager{"test.db"};
-        duck::BufferPoolManager pool{disk_manager, 5};
-        duck::LockManager lock_manager;
-        duck::TransactionManager tx_manager{lock_manager};
+        duck::Database db{"test.db"};
 
-        duck::Catalog catalog{pool, disk_manager, lock_manager};
-
-        for (auto table : catalog.all_tables()) {
-            std::println("{}\n{}\n", table->name(), table->schema().to_string());
-        }
-
-        auto _table{catalog.get_table("heap_test3")};
-        if (!_table.has_value())
-            std::println("Table not found!");
-        duck::Table* table = _table.value();
+        // auto _table{db.get_table("heap_test3")};
+        // if (!_table.has_value())
+        //     std::println("Table not found!");
+        // duck::Table* table = _table.value();
 
         std::vector<duck::Column> columns{duck::Column{"id", duck::TypeId::UINT32},
                                           duck::Column{"username", duck::TypeId::VARCHAR, 3000}};
         duck::Schema schema{columns};
-        std::vector<duck::Value> values{duck::Value::of((uint32_t)429967296), duck::Value::of(std::string("nikola"))};
+        std::vector<duck::Value> values{duck::Value::of((uint32_t)429967296), duck::Value::of(std::string("!nikola!"))};
         auto new_tuple{duck::Tuple{values, schema}};
 
-        auto tx{tx_manager.begin()};
+        auto tx{db.begin_tx()};
+        auto table{db.create_table("test_table2", schema, tx.get())};
         table->insert_tuple(new_tuple, tx.get());
-        tx_manager.commit(tx.get());
+        // table->update_tuple({2, 1}, new_tuple, tx.get());
+        // table->delete_tuple({2, 1}, tx.get());
+        // table->delete_tuple({2, 2}, tx.get());
+        db.rollback_tx(tx.get());
+
+        for (auto table : db.all_tables()) {
+            std::println("{}\n{}\n", table->name(), table->schema().to_string());
+        }
 
         duck::Table::Scan scan = table->scan();
         while (auto entry = scan.next()) {

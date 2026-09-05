@@ -1,6 +1,7 @@
 #include "duck/transaction/manager.hpp"
 #include "duck/common/types.hpp"
 #include "duck/transaction/transaction.hpp"
+#include <cassert>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -18,6 +19,9 @@ std::shared_ptr<Transaction> TransactionManager::begin() {
 }
 
 void TransactionManager::commit(Transaction* tx) {
+    assert(tx != nullptr);
+
+    tx->set_state(TransactionState::SHRINKING);
     lock_manager_.unlock_all(tx);
     tx->set_state(TransactionState::COMMITTED);
 
@@ -25,6 +29,10 @@ void TransactionManager::commit(Transaction* tx) {
     active_txs_.erase(tx->id());
 }
 void TransactionManager::abort(Transaction* tx) {
+    assert(tx != nullptr);
+
+    tx->set_state(TransactionState::SHRINKING);
+    tx->undo();
     lock_manager_.unlock_all(tx);
     tx->set_state(TransactionState::ABORTED);
 

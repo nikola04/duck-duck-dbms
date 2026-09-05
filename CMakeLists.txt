@@ -55,6 +55,7 @@ add_library(duck_transaction
     src/transaction/transaction.cpp
     src/transaction/lock_manager.cpp
     src/transaction/manager.cpp
+    src/transaction/undo.cpp
 )
 target_include_directories(duck_transaction PUBLIC include)
 
@@ -74,10 +75,17 @@ add_library(duck_catalog
 target_include_directories(duck_catalog PUBLIC include)
 target_link_libraries(duck_catalog PUBLIC duck_table)
 
+# duck_database
+add_library(duck_database
+    src/database/database.cpp
+)
+target_include_directories(duck_database PUBLIC include)
+target_link_libraries(duck_database PUBLIC duck_catalog)
+
 # --- executable ---
 add_executable(duck src/main.cpp)
 target_link_libraries(duck PRIVATE 
-    duck_catalog
+    duck_database
 )
 
 # --- tests ---

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../common/rid.hpp"
+#include "duck/common/rid.hpp"
 #include "duck/common/types.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -33,6 +33,7 @@ public:
     std::span<std::byte> get_tuple(std::uint16_t slot_num);
     bool try_update_in_place(RID rid, std::span<const std::byte> tuple_data);
     bool delete_tuple(std::uint16_t slot_num);
+    void restore_tuple(std::uint16_t slot_num, std::span<const std::byte> tuple_data);
 
     std::int32_t free_space_bytes() const;
     bool is_compacted() const;

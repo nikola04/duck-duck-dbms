@@ -26,6 +26,10 @@ Each layer only depends on the one below it; concurrency guarantees (thread-safe
 - **`reinterpret_cast` over raw page bytes (`PageHeader`, `Slot`) is technically in a strict-aliasing grey area** pre-C++23 `start_lifetime_as`. In practice this is the standard, universally-used approach for on-disk binary formats and works reliably on GCC/Clang for standard-layout structs, but it isn't formally guaranteed by the standard.
 - **Deadlock avoidance** is timeout-based (1s), not wait-for-graph detection
 
+- **RID-level locking currently does not protect deleted-slot reuse** by concurrent `INSERT` operations. An `INSERT` can reuse a slot belonging to another active transaction because the RID does not exist until after the tuple is inserted.
+  e.g. it is dangerous when transaction is rollbacking and another already inserted into that RID.
+  This should be fixed later by introducing page/slot-level locking or deferred slot reuse until the deleting transaction commits or aborts.
+
 ## License
 
 This project is licensed under the [MIT License](./LICENSE).
