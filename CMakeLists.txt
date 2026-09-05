@@ -102,6 +102,7 @@ if(DUCK_BUILD_TESTS)
       test/tuple/schema_column_test.cpp
       test/catalog/catalog_test.cpp
       test/catalog/catalog_drop_table_test.cpp
+      test/transaction/transaction_lock_test.cpp
   )
   target_link_libraries(duck_tests PRIVATE duck_catalog GTest::gtest_main)
   include(GoogleTest)

@@ -59,9 +59,11 @@ std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple, Transaction*
         return std::nullopt;
 
     // same issue as insert, rid is unknown
-    // if (*ret_rid != rid && tx != nullptr && !lock_manager_.lock_exclusive(tx, *ret_rid)) {
-    //     return std::nullopt;
-    // }
+    if (*ret_rid != rid && tx != nullptr) {
+        if (!lock_manager_.lock_exclusive(tx, *ret_rid)) {
+            return std::nullopt;
+        }
+    }
 
     return ret_rid;
 }

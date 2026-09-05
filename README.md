@@ -24,6 +24,7 @@ Each layer only depends on the one below it; concurrency guarantees (thread-safe
 - **Persistent free-list, capped at one metadata page.** `DiskManager` persists its free-list (deallocated `page_id`s) to a reserved metadata page (`page_id = 0`) on flush, and reloads it on startup — deallocated pages are correctly recycled across process restarts. The list is capped at `kMAX_FREE_LIST_ENTRIES` (~1000 entries for a 4KB page); exceeding this currently throws rather than silently truncating. A natural extension would let the metadata header link to additional overflow pages (the same page-chaining technique used by `TableHeap`) once a workload accumulates enough deallocated pages to hit this limit.
 - **DiskManager is POSIX-only.** Uses `pread`/`pwrite` directly; no Windows (`ReadFile`/`WriteFile` + `OVERLAPPED`) backend.
 - **`reinterpret_cast` over raw page bytes (`PageHeader`, `Slot`) is technically in a strict-aliasing grey area** pre-C++23 `start_lifetime_as`. In practice this is the standard, universally-used approach for on-disk binary formats and works reliably on GCC/Clang for standard-layout structs, but it isn't formally guaranteed by the standard.
+- **Deadlock avoidance** is timeout-based (1s), not wait-for-graph detection
 
 ## License
 
