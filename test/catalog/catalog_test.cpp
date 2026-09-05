@@ -6,10 +6,13 @@
 #include "duck/buffer/pool_manager.hpp"
 #include "duck/catalog/catalog.hpp"
 #include "duck/storage/disk_manager.hpp"
+#include "duck/transaction/lock_manager.hpp"
+#include "duck/transaction/manager.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <gtest/gtest.h>
 #include <string_view>
@@ -40,7 +43,8 @@ protected:
 TEST_F(CatalogTest, CreateTableReturnsUsableTable) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     duck::Table* table = catalog.create_table("users", MakeUsersSchema());
     ASSERT_NE(table, nullptr);
@@ -51,7 +55,8 @@ TEST_F(CatalogTest, CreateTableReturnsUsableTable) {
 TEST_F(CatalogTest, CreatingDuplicateTableThrows) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     catalog.create_table("users", MakeUsersSchema());
     EXPECT_THROW(catalog.create_table("users", MakeUsersSchema()), std::runtime_error);
@@ -60,7 +65,8 @@ TEST_F(CatalogTest, CreatingDuplicateTableThrows) {
 TEST_F(CatalogTest, GetTableReturnsNulloptWhenMissing) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     EXPECT_FALSE(catalog.get_table("nonexistent").has_value());
 }
@@ -68,7 +74,8 @@ TEST_F(CatalogTest, GetTableReturnsNulloptWhenMissing) {
 TEST_F(CatalogTest, GetTableReturnsSameTableAfterCreate) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     duck::Table* created = catalog.create_table("users", MakeUsersSchema());
     auto fetched = catalog.get_table("users");
@@ -80,9 +87,13 @@ TEST_F(CatalogTest, GetTableReturnsSameTableAfterCreate) {
 TEST_F(CatalogTest, CreateAndInsertRoundTrip) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::TransactionManager txn_manager{lock_manager};
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     duck::Table* table = catalog.create_table("users", MakeUsersSchema());
+
+    duck::Transaction* txn = txn_manager.begin();
 
     duck::Tuple row(
         {
@@ -92,20 +103,23 @@ TEST_F(CatalogTest, CreateAndInsertRoundTrip) {
         },
         table->schema());
 
-    auto rid = table->insert_tuple(row);
+    auto rid = table->insert_tuple(row, txn);
     ASSERT_TRUE(rid.has_value());
 
-    auto fetched = table->get_tuple(*rid);
+    auto fetched = table->get_tuple(*rid, txn);
     ASSERT_TRUE(fetched.has_value());
     EXPECT_EQ(fetched->get(0).as_uint32(), 1u);
     EXPECT_EQ(fetched->get(1).as_string(), "alice");
     EXPECT_EQ(fetched->get(2).as_bool(), true);
+
+    txn_manager.commit(txn);
 }
 
 TEST_F(CatalogTest, AllTablesReturnsEveryCreatedTable) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     catalog.create_table("users", MakeUsersSchema());
     catalog.create_table("cars", duck::Schema(std::vector<duck::Column>{
@@ -129,10 +143,13 @@ TEST_F(CatalogTest, PersistsAcrossReopen) {
     {
         duck::DiskManager dm{test_file_};
         duck::BufferPoolManager bpm{dm, 5};
-        duck::Catalog catalog{bpm, dm};
+        duck::LockManager lock_manager;
+        duck::TransactionManager txn_manager{lock_manager};
+        duck::Catalog catalog{bpm, dm, lock_manager};
 
         duck::Table* table = catalog.create_table("users", MakeUsersSchema());
 
+        duck::Transaction* txn = txn_manager.begin();
         duck::Tuple row(
             {
                 duck::Value::of(static_cast<std::uint32_t>(42)),
@@ -140,12 +157,14 @@ TEST_F(CatalogTest, PersistsAcrossReopen) {
                 duck::Value::of(false),
             },
             table->schema());
-        table->insert_tuple(row);
+        table->insert_tuple(row, txn);
+        txn_manager.commit(txn);
     } // everything goes out of scope, BPM destructor flushes
 
     duck::DiskManager dm2{test_file_};
     duck::BufferPoolManager bpm2{dm2, 5};
-    duck::Catalog catalog2{bpm2, dm2};
+    duck::LockManager lock_manager2;
+    duck::Catalog catalog2{bpm2, dm2, lock_manager2};
 
     auto fetched = catalog2.get_table("users");
     ASSERT_TRUE(fetched.has_value());
@@ -165,7 +184,8 @@ TEST_F(CatalogTest, MultipleTablesPersistWithDistinctSchemas) {
     {
         duck::DiskManager dm{test_file_};
         duck::BufferPoolManager bpm{dm, 5};
-        duck::Catalog catalog{bpm, dm};
+        duck::LockManager lock_manager;
+        duck::Catalog catalog{bpm, dm, lock_manager};
 
         catalog.create_table("users", MakeUsersSchema());
         catalog.create_table("cars", duck::Schema(std::vector<duck::Column>{
@@ -177,7 +197,8 @@ TEST_F(CatalogTest, MultipleTablesPersistWithDistinctSchemas) {
 
     duck::DiskManager dm2{test_file_};
     duck::BufferPoolManager bpm2{dm2, 5};
-    duck::Catalog catalog2{bpm2, dm2};
+    duck::LockManager lock_manager2;
+    duck::Catalog catalog2{bpm2, dm2, lock_manager2};
 
     auto users = catalog2.get_table("users");
     auto cars = catalog2.get_table("cars");
@@ -191,7 +212,8 @@ TEST_F(CatalogTest, MultipleTablesPersistWithDistinctSchemas) {
 TEST_F(CatalogTest, ConcurrentCreateTableProducesUniqueTables) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 10};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     constexpr int kNumThreads = 8;
     std::vector<std::thread> threads;
@@ -211,8 +233,8 @@ TEST_F(CatalogTest, ConcurrentCreateTableProducesUniqueTables) {
     for (auto& th : threads)
         th.join();
 
-    for (bool ok : succeeded) {
-        EXPECT_TRUE(ok);
+    for (auto& ok : succeeded) {
+        EXPECT_TRUE(ok.load());
     }
     EXPECT_EQ(catalog.all_tables().size(), static_cast<size_t>(kNumThreads));
 }
@@ -220,7 +242,8 @@ TEST_F(CatalogTest, ConcurrentCreateTableProducesUniqueTables) {
 TEST_F(CatalogTest, DropTableRemovesItFromCatalog) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     catalog.create_table("users", MakeUsersSchema());
     EXPECT_TRUE(catalog.drop_table("users"));
@@ -230,7 +253,8 @@ TEST_F(CatalogTest, DropTableRemovesItFromCatalog) {
 TEST_F(CatalogTest, DropTableReturnsFalseWhenMissing) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     EXPECT_FALSE(catalog.drop_table("nonexistent"));
 }
@@ -239,7 +263,8 @@ TEST_F(CatalogTest, DroppedTableDoesNotReappearAfterReopen) {
     {
         duck::DiskManager dm{test_file_};
         duck::BufferPoolManager bpm{dm, 5};
-        duck::Catalog catalog{bpm, dm};
+        duck::LockManager lock_manager;
+        duck::Catalog catalog{bpm, dm, lock_manager};
 
         catalog.create_table("users", MakeUsersSchema());
         catalog.create_table("cars", duck::Schema(std::vector<duck::Column>{
@@ -250,7 +275,8 @@ TEST_F(CatalogTest, DroppedTableDoesNotReappearAfterReopen) {
 
     duck::DiskManager dm2{test_file_};
     duck::BufferPoolManager bpm2{dm2, 5};
-    duck::Catalog catalog2{bpm2, dm2};
+    duck::LockManager lock_manager2;
+    duck::Catalog catalog2{bpm2, dm2, lock_manager2};
 
     EXPECT_FALSE(catalog2.get_table("users").has_value());
     EXPECT_TRUE(catalog2.get_table("cars").has_value());
@@ -259,7 +285,8 @@ TEST_F(CatalogTest, DroppedTableDoesNotReappearAfterReopen) {
 TEST_F(CatalogTest, CanRecreateTableAfterDrop) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 5};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     catalog.create_table("users", MakeUsersSchema());
     catalog.drop_table("users");

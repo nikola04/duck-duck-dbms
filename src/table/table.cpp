@@ -1,6 +1,7 @@
 #include "duck/table/table.hpp"
 #include "duck/common/types.hpp"
 #include "duck/table/table_heap.hpp"
+#include "duck/transaction/lock_manager.hpp"
 #include "duck/tuple/tuple.hpp"
 #include <cstddef>
 #include <optional>
@@ -8,18 +9,29 @@
 
 namespace duck {
 
-Table::Table(std::string name, TableHeap table_heap, const Schema& schema)
-    : name_(std::move(name)), table_heap_(std::move(table_heap)), schema_(schema) {
+Table::Table(std::string name, TableHeap table_heap, const Schema& schema, LockManager& lock_manager)
+    : name_(std::move(name)), table_heap_(std::move(table_heap)), schema_(schema), lock_manager_(lock_manager) {
 }
 
-std::optional<RID> Table::insert_tuple(const Tuple& tuple) {
+std::optional<RID> Table::insert_tuple(const Tuple& tuple, Transaction* tx) {
     if (!schema_.compatible_with(tuple.schema()))
         throw std::runtime_error("Table::insert_tuple: schemas not compatible");
 
-    return table_heap_.insert_tuple(tuple.serialize());
+    auto rid{table_heap_.insert_tuple(tuple.serialize())};
+    if (!rid.has_value())
+        return std::nullopt;
+
+    if (tx != nullptr && !lock_manager_.lock_exclusive(
+                             tx, rid.value())) // lock failed but data already written, should be done secured on another layer
+        return std::nullopt;
+
+    return rid;
 }
 
-std::optional<Tuple> Table::get_tuple(RID rid) {
+std::optional<Tuple> Table::get_tuple(RID rid, Transaction* tx) {
+    if (tx != nullptr && !lock_manager_.lock_shared(tx, rid))
+        return std::nullopt;
+
     auto bytes{table_heap_.get_tuple(rid)};
     if (!bytes.has_value())
         return std::nullopt;
@@ -27,13 +39,19 @@ std::optional<Tuple> Table::get_tuple(RID rid) {
     return Tuple{bytes.value(), schema_};
 }
 
-bool Table::delete_tuple(RID rid) {
+bool Table::delete_tuple(RID rid, Transaction* tx) {
+    if (tx != nullptr && !lock_manager_.lock_exclusive(tx, rid))
+        return false;
+
     return table_heap_.delete_tuple(rid);
 }
 
-std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple) {
+std::optional<RID> Table::update_tuple(RID rid, const Tuple& tuple, Transaction* tx) {
     if (!schema_.compatible_with(tuple.schema()))
         throw std::runtime_error("Table::update_tuple: schemas not compatible");
+
+    if (tx != nullptr && !lock_manager_.lock_exclusive(tx, rid))
+        return std::nullopt;
 
     return table_heap_.update_tuple(rid, tuple.serialize());
 }

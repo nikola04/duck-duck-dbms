@@ -50,6 +50,14 @@ add_library(duck_tuple
 )
 target_include_directories(duck_tuple PUBLIC include)
 
+# transaction
+add_library(duck_transaction
+    src/transaction/transaction.cpp
+    src/transaction/lock_manager.cpp
+    src/transaction/manager.cpp
+)
+target_include_directories(duck_transaction PUBLIC include)
+
 # duck_table
 add_library(duck_table
     src/table/slotted_page.cpp
@@ -57,7 +65,7 @@ add_library(duck_table
     src/table/table.cpp
 )
 target_include_directories(duck_table PUBLIC include)
-target_link_libraries(duck_table PUBLIC duck_tuple duck_buffer)
+target_link_libraries(duck_table PUBLIC duck_tuple duck_buffer duck_transaction)
 
 # duck_catalog
 add_library(duck_catalog

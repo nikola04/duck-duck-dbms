@@ -6,6 +6,8 @@
 #include "duck/buffer/pool_manager.hpp"
 #include "duck/storage/disk_manager.hpp"
 #include "duck/table/table.hpp"
+#include "duck/transaction/lock_manager.hpp"
+#include "duck/transaction/manager.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 
@@ -39,16 +41,21 @@ protected:
 TEST_F(TableDropPagesTest, DropPagesReturnsZeroWhenNothingPinned) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 10};
+    duck::LockManager lock_manager;
+    duck::TransactionManager txn_manager{lock_manager};
 
     duck::Schema schema = MakeSimpleSchema();
-    duck::Table table{"t", duck::TableHeap::create(bpm), schema};
+    duck::Table table{"t", duck::TableHeap::create(bpm), schema, lock_manager};
 
-    // Force multiple pages
+    duck::Transaction* txn = txn_manager.begin();
+
     std::string big_value(500, 'x');
     for (int i = 0; i < 20; ++i) {
         duck::Tuple row({duck::Value::of(static_cast<std::uint32_t>(i))}, schema);
-        table.insert_tuple(row);
+        table.insert_tuple(row, txn);
     }
+
+    txn_manager.commit(txn); // pusti lock-ove pre nego što probaš da obrišeš stranice
 
     auto [failed_count, status] = table.drop_pages();
     EXPECT_EQ(status, duck::DropTableStatus::SUCCESS);
@@ -58,12 +65,16 @@ TEST_F(TableDropPagesTest, DropPagesReturnsZeroWhenNothingPinned) {
 TEST_F(TableDropPagesTest, DropPagesCountsPinnedPagesAsFailed) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 10};
+    duck::LockManager lock_manager;
+    duck::TransactionManager txn_manager{lock_manager};
 
     duck::Schema schema = MakeSimpleSchema();
-    duck::Table table{"t", duck::TableHeap::create(bpm), schema};
+    duck::Table table{"t", duck::TableHeap::create(bpm), schema, lock_manager};
 
+    duck::Transaction* txn = txn_manager.begin();
     duck::Tuple row({duck::Value::of(static_cast<std::uint32_t>(1))}, schema);
-    table.insert_tuple(row);
+    table.insert_tuple(row, txn);
+    txn_manager.commit(txn);
 
     // Pin the only page manually to simulate a concurrent reader still holding it.
     duck::Page* page = bpm.fetch_page(table.table_heap()->first_page_id());

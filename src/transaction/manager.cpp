@@ -19,8 +19,18 @@ Transaction* TransactionManager::begin() {
 }
 
 void TransactionManager::commit(Transaction* tx) {
+    lock_manager_.unlock_all(tx);
+    tx->set_state(TransactionState::COMMITED);
+
+    std::unique_lock lock{latch_};
+    active_txs_.erase(tx->id());
 }
 void TransactionManager::abort(Transaction* tx) {
+    lock_manager_.unlock_all(tx);
+    tx->set_state(TransactionState::ABORTED);
+
+    std::unique_lock lock{latch_};
+    active_txs_.erase(tx->id());
 }
 
 } // namespace duck

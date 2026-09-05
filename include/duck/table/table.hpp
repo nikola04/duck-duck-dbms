@@ -2,6 +2,8 @@
 
 #include "duck/common/rid.hpp"
 #include "duck/table/table_heap.hpp"
+#include "duck/transaction/lock_manager.hpp"
+#include "duck/transaction/transaction.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/tuple.hpp"
 #include <cstddef>
@@ -15,12 +17,12 @@ enum class DropTableStatus { READ_PAGES_FAILED, SUCCESS };
 
 class Table {
 public:
-    explicit Table(std::string name, TableHeap table_heap, const Schema& schema);
+    explicit Table(std::string name, TableHeap table_heap, const Schema& schema, LockManager& lock_manager);
 
-    std::optional<RID> insert_tuple(const Tuple& tuple);
-    std::optional<Tuple> get_tuple(RID rid);
-    std::optional<RID> update_tuple(RID rid, const Tuple& tuple);
-    bool delete_tuple(RID rid);
+    std::optional<RID> insert_tuple(const Tuple& tuple, Transaction* tx = nullptr);
+    std::optional<Tuple> get_tuple(RID rid, Transaction* tx = nullptr);
+    std::optional<RID> update_tuple(RID rid, const Tuple& tuple, Transaction* tx = nullptr);
+    bool delete_tuple(RID rid, Transaction* tx = nullptr);
 
     std::pair<size_t, DropTableStatus> drop_pages();
 
@@ -42,6 +44,8 @@ private:
 
     TableHeap table_heap_;
     const Schema& schema_;
+
+    LockManager& lock_manager_;
 };
 
 class Table::Scan {

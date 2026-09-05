@@ -25,20 +25,20 @@ const Schema Catalog::catalog_schema_{std::vector<Column>{
     {"schema_bytes", TypeId::VARBINARY, 4096},
 }};
 
-Catalog::Catalog(BufferPoolManager& bpm, DiskManager& disk_manager)
-    : bpm_(bpm), disk_manager_(disk_manager), catalog_table_(init_table()) {
+Catalog::Catalog(BufferPoolManager& bpm, DiskManager& disk_manager, LockManager& lock_manager)
+    : bpm_(bpm), disk_manager_(disk_manager), lock_manager_(lock_manager), catalog_table_(init_table()) {
     load_existing_tables();
 }
 
 Table Catalog::init_table() {
     if (disk_manager_.capacity() <= kCATALOG_FIRST_PAGE_ID) {
-        return Table{"duck_catalog_", duck::TableHeap::create(bpm_), catalog_schema_};
+        return Table{"duck_catalog_", duck::TableHeap::create(bpm_), catalog_schema_, lock_manager_};
     }
     TableHeap heap{kCATALOG_FIRST_PAGE_ID, bpm_};
-    return Table{"duck_catalog_", std::move(heap), catalog_schema_};
+    return Table{"duck_catalog_", std::move(heap), catalog_schema_, lock_manager_};
 }
 
-Table* Catalog::create_table(const std::string name, Schema schema) {
+Table* Catalog::create_table(const std::string name, Schema schema, Transaction* tx) {
     std::unique_lock<std::shared_mutex> lock{latch_};
     if (auto it{tables_.find(name)}; it != tables_.end())
         throw std::runtime_error(std::format("Catalog::create_table: table with name {} already exists", name));
@@ -48,13 +48,13 @@ Table* Catalog::create_table(const std::string name, Schema schema) {
     Tuple entry({std::vector<Value>{Value::of(name), Value::of(heap.first_page_id()), Value::of(schema.serialize())},
                  catalog_schema_});
 
-    auto rid{catalog_table_.insert_tuple(entry)};
+    auto rid{catalog_table_.insert_tuple(entry, tx)};
     if (!rid.has_value()) {
         throw std::runtime_error("Catalog::CreateTable: failed to write catalog entry");
     }
 
     auto schema_ptr{std::make_unique<Schema>(schema)};
-    auto table_ptr{std::make_unique<Table>(name, std::move(heap), *schema_ptr)};
+    auto table_ptr{std::make_unique<Table>(name, std::move(heap), *schema_ptr, lock_manager_)};
 
     Table* result = table_ptr.get();
     tables_[name] = TableEntry{rid.value(), std::move(schema_ptr), std::move(table_ptr)};
@@ -70,14 +70,14 @@ std::optional<Table*> Catalog::get_table(const std::string& name) const {
     return std::nullopt;
 }
 
-bool Catalog::drop_table(const std::string& name) {
+bool Catalog::drop_table(const std::string& name, Transaction* tx) {
     std::unique_lock<std::shared_mutex> lock{latch_};
 
     auto it{tables_.find(name)};
     if (it == tables_.end())
         return false;
 
-    if (auto deleted{catalog_table_.delete_tuple(it->second.rid)}; !deleted) {
+    if (auto deleted{catalog_table_.delete_tuple(it->second.rid, tx)}; !deleted) {
         return false;
     }
 
@@ -120,7 +120,7 @@ void Catalog::load_existing_tables() {
         PageID first_page_id{tuple.get(1).as_uint32()};
 
         auto schema{std::make_unique<Schema>(tuple.get(2).as_bytes())};
-        auto table_ptr{std::make_unique<Table>(table_name, TableHeap{first_page_id, bpm_}, *schema)};
+        auto table_ptr{std::make_unique<Table>(table_name, TableHeap{first_page_id, bpm_}, *schema, lock_manager_)};
 
         tables_[table_name] = TableEntry{entry->first, std::move(schema), std::move(table_ptr)};
     }

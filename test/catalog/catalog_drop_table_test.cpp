@@ -6,6 +6,7 @@
 #include "duck/buffer/pool_manager.hpp"
 #include "duck/catalog/catalog.hpp"
 #include "duck/storage/disk_manager.hpp"
+#include "duck/transaction/lock_manager.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 
@@ -39,7 +40,8 @@ protected:
 TEST_F(CatalogDropTableTest, DropTableDoesNotThrowWhenPagesAreFree) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 10};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     catalog.create_table("users", MakeSimpleSchema());
     EXPECT_TRUE(catalog.drop_table("users"));
@@ -49,7 +51,8 @@ TEST_F(CatalogDropTableTest, DropTableDoesNotThrowWhenPagesAreFree) {
 TEST_F(CatalogDropTableTest, DropTableStillRemovesEntryEvenIfPagePinned) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 10};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     duck::Table* table = catalog.create_table("users", MakeSimpleSchema());
     duck::PageID first_page = table->table_heap()->first_page_id();
@@ -69,7 +72,8 @@ TEST_F(CatalogDropTableTest, DropTableStillRemovesEntryEvenIfPagePinned) {
 TEST_F(CatalogDropTableTest, PagesAreReclaimedAndReusableAfterDrop) {
     duck::DiskManager dm{test_file_};
     duck::BufferPoolManager bpm{dm, 10};
-    duck::Catalog catalog{bpm, dm};
+    duck::LockManager lock_manager;
+    duck::Catalog catalog{bpm, dm, lock_manager};
 
     catalog.create_table("users", MakeSimpleSchema());
     duck::PageID users_first_page = catalog.get_table("users").value()->table_heap()->first_page_id();
