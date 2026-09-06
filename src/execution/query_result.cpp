@@ -3,7 +3,7 @@
 namespace duck {
 
 std::optional<Record> QueryResult::next() {
-    return root_.next();
+    return root_->next();
 }
 
 } // namespace duck

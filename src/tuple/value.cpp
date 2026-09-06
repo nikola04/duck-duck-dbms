@@ -53,6 +53,10 @@ ValueType Value::type() const {
     return type_;
 }
 
+value_variant Value::data() const {
+    return data_;
+}
+
 std::int64_t Value::as_int64() const {
     if (is_null_)
         throw std::runtime_error("Value::as_int64: tried to read null value");
@@ -97,6 +101,17 @@ const std::vector<std::byte>& Value::as_bytes() const {
     if (is_null_)
         throw std::runtime_error("Value::as_bytes: tried to read null value");
     return std::get<std::vector<std::byte>>(data_);
+}
+
+bool Value::is_integral() const {
+    return type_ == ValueType::INT32 || type_ == ValueType::INT64 || type_ == ValueType::UINT32 ||
+           type_ == ValueType::UINT64;
+}
+bool Value::is_floating() const {
+    return type_ == ValueType::FLOAT || type_ == ValueType::DOUBLE;
+}
+bool Value::is_numeric() const {
+    return is_integral() || is_floating();
 }
 
 std::string Value::to_string() const {

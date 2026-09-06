@@ -6,11 +6,17 @@
 #include "duck/database/database.hpp"
 #include "duck/execution/executor.hpp"
 #include "duck/execution/executor_context.hpp"
+#include "duck/execution/expression/column.hpp"
+#include "duck/execution/expression/comparison.hpp"
+#include "duck/execution/expression/constant.hpp"
+#include "duck/execution/operator/filter/filter.hpp"
 #include "duck/execution/operator/scan/seq_scan.hpp"
 #include "duck/table/table.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/tuple.hpp"
+#include "duck/tuple/value.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <iostream>
 #include <memory>
@@ -38,8 +44,14 @@ int main() {
         duck::ExecutorContext context{tx.get()};
         // table->insert_tuple(new_tuple, tx.get());
 
+        auto comp_exp{std::make_unique<duck::ComparisonExpression>(
+            std::make_unique<duck::ColumnExpression>(1), duck::ComparisonOperator::LESS,
+            std::make_unique<duck::ConstantExpression>(duck::Value::of((uint32_t)500)))};
+
         auto scan_op{std::make_unique<duck::SequentialScanOperator>(context, table)};
-        duck::Executor executor{std::move(scan_op)};
+        auto filter_op{std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(comp_exp))};
+
+        duck::Executor executor{std::move(filter_op)};
 
         auto result{executor.execute()};
         while (auto entry = result.next()) {

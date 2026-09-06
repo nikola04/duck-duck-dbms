@@ -57,6 +57,7 @@ public:
 
     bool is_null() const;
     ValueType type() const;
+    value_variant data() const;
 
     std::int64_t as_int64() const;
     std::uint64_t as_uint64() const;
@@ -68,12 +69,16 @@ public:
     const std::string& as_string() const;
     const std::vector<std::byte>& as_bytes() const;
 
+    bool is_integral() const;
+    bool is_floating() const;
+    bool is_numeric() const;
+
     std::string to_string() const;
 
     std::size_t serialized_size() const;
     void serialize_to(std::vector<std::byte>& out) const;
 
-    bool operator==(const Value& other) {
+    bool operator==(const Value& other) const {
         if (is_null_ != other.is_null_)
             return false;
         if (is_null_)

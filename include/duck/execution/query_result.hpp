@@ -1,17 +1,18 @@
 #pragma once
 
 #include "duck/execution/operator/operator.hpp"
+#include <memory>
 #include <optional>
 
 namespace duck {
 
 class QueryResult {
 public:
-    explicit QueryResult(Operator& op) : root_(op) {};
+    explicit QueryResult(std::unique_ptr<Operator> op);
     std::optional<Record> next();
 
 private:
-    Operator& root_;
+    std::unique_ptr<Operator> root_;
 };
 
 } // namespace duck
