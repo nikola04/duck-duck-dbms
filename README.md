@@ -1,6 +1,6 @@
-# Simple Duck DBMS
+# Duck Duck DBMS
 
-A simple multithreaded Database Managment system build in C++23
+A simple thread-safe Database Managment system build in C++23
 
 ## Architecture
 
