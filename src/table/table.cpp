@@ -117,7 +117,7 @@ std::optional<std::pair<RID, Tuple>> Table::Scan::next() {
     if (!result.has_value())
         return std::nullopt;
 
-    return std::pair{result->first, Tuple{result->second, schema_}};
+    return std::pair{result->first, Tuple{std::move(result->second), schema_}};
 }
 
 } // namespace duck

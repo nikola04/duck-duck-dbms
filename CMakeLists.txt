@@ -82,10 +82,19 @@ add_library(duck_database
 target_include_directories(duck_database PUBLIC include)
 target_link_libraries(duck_database PUBLIC duck_catalog)
 
+# duck_execution
+add_library(duck_execution
+    src/execution/executor.cpp
+    src/execution/query_result.cpp
+    src/execution/operator/scan/seq_scan.cpp
+)
+target_include_directories(duck_execution PUBLIC include)
+target_link_libraries(duck_execution PUBLIC duck_database)
+
 # --- executable ---
 add_executable(duck src/main.cpp)
 target_link_libraries(duck PRIVATE 
-    duck_database
+    duck_execution
 )
 
 # --- tests ---

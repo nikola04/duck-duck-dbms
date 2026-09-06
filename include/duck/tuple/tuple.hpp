@@ -34,6 +34,13 @@ public:
         return values_.at(idx.value());
     }
 
+    const std::vector<Value>& values() const {
+        return values_;
+    }
+    std::vector<Value> take_values() && {
+        return std::move(values_);
+    }
+
     std::vector<std::byte> serialize() const;
     std::string to_string() const; // debug helper
 
