@@ -15,6 +15,8 @@ public:
     void init() override;
     std::optional<Record> next() override;
 
+    const Schema& output_schema() const override;
+
 private:
     Table* table_;
     ExecutorContext& context_;

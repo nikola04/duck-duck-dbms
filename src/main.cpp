@@ -11,6 +11,7 @@
 #include "duck/execution/expression/constant.hpp"
 #include "duck/execution/expression/logical.hpp"
 #include "duck/execution/operator/filter/filter.hpp"
+#include "duck/execution/operator/projection/projection.hpp"
 #include "duck/execution/operator/scan/seq_scan.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/tuple.hpp"
@@ -22,6 +23,7 @@
 #include <memory>
 #include <print>
 #include <string>
+#include <vector>
 
 int main() {
     try {
@@ -56,10 +58,12 @@ int main() {
 
         auto scan_op{std::make_unique<duck::SequentialScanOperator>(context, table)};
         auto filter_op{std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(b_expr))};
+        auto proj_op{std::make_unique<duck::ProjectionOperator>(std::move(filter_op), std::vector<std::size_t>{0, 1})};
 
-        duck::Executor executor{std::move(filter_op)};
+        duck::Executor executor{std::move(proj_op)};
 
         auto result{executor.execute()};
+        std::println("Schema: {}", result.output_schema().to_string());
         while (auto entry = result.next()) {
             std::println("Entry: {} | {}", entry->get(0).to_string(), entry->get(1).to_string());
         }

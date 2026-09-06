@@ -19,4 +19,8 @@ std::optional<Record> SequentialScanOperator::next() {
     return Record{std::move(result->second).take_values()};
 }
 
+const Schema& SequentialScanOperator::output_schema() const {
+    return table_->schema();
+}
+
 } // namespace duck

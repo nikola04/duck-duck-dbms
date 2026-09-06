@@ -14,6 +14,8 @@ public:
     void init() override;
     std::optional<Record> next() override;
 
+    const Schema& output_schema() const override;
+
 private:
     std::unique_ptr<Operator> child_;
     std::unique_ptr<Expression> comparator_;

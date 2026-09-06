@@ -92,6 +92,7 @@ add_library(duck_execution
     src/execution/expression/logical.cpp
     src/execution/operator/scan/seq_scan.cpp
     src/execution/operator/filter/filter.cpp
+    src/execution/operator/projection/projection.cpp
 )
 target_include_directories(duck_execution PUBLIC include)
 target_link_libraries(duck_execution PUBLIC duck_database)

@@ -22,4 +22,8 @@ std::optional<Record> FilterOperator::next() {
     return std::nullopt;
 }
 
+const Schema& FilterOperator::output_schema() const {
+    return child_->output_schema();
+}
+
 } // namespace duck

@@ -11,6 +11,8 @@ public:
     explicit QueryResult(std::unique_ptr<Operator> op);
     std::optional<Record> next();
 
+    const Schema& output_schema() const;
+
 private:
     std::unique_ptr<Operator> root_;
 };
