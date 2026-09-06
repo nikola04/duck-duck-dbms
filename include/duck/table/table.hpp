@@ -37,7 +37,7 @@ public:
     }
 
     class Scan;
-    Scan scan() const;
+    Scan scan(Transaction* tx = nullptr) const;
 
 private:
     std::string name_;
@@ -50,14 +50,16 @@ private:
 
 class Table::Scan {
 public:
-    Scan(TableHeap::Scan heap_scan, const Schema& schema) : heap_scan_(std::move(heap_scan)), schema_(schema) {
-    }
+    Scan(TableHeap::Scan heap_scan, const Schema& schema, LockManager& lock_manager, Transaction* tx)
+        : heap_scan_(std::move(heap_scan)), schema_(schema), lock_manager_(lock_manager), tx_(tx) {};
 
     std::optional<std::pair<RID, Tuple>> next();
 
 private:
     TableHeap::Scan heap_scan_;
     const Schema& schema_;
+    LockManager& lock_manager_;
+    Transaction* tx_;
 };
 
 } // namespace duck

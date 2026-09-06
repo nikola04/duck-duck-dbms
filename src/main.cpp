@@ -49,15 +49,15 @@ int main() {
         // table->update_tuple({2, 1}, new_tuple, tx.get());
         // table->delete_tuple({2, 1}, tx.get());
         // table->delete_tuple({2, 2}, tx.get());
-        db.commit_tx(tx.get());
+        db.rollback_tx(tx.get());
 
         // for (auto table : db.all_tables()) {
         //     std::println("{}\n{}\n", table->name(), table->schema().to_string());
         // }
 
-        // duck::Table::Scan scan = table->scan();
-        // while (auto entry = scan_result.next()) {
-        //     std::println("Entry: {}", entry->get(1).to_string());
+        // duck::Table::Scan scan = table->scan(tx.get());
+        // while (auto entry = scan.next()) {
+        //     std::println("Entry: {}", entry->second.get(1).to_string());
         // }
 
     } catch (std::exception& e) {

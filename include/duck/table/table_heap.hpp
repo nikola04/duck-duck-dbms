@@ -79,6 +79,7 @@ public:
     }
 
     std::optional<std::pair<RID, std::vector<std::byte>>> next();
+    RID next_rid() const;
 
 private:
     BufferPoolManager* bpm_{};

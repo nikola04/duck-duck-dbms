@@ -5,7 +5,7 @@
 namespace duck {
 
 SequentialScanOperator::SequentialScanOperator(ExecutorContext& context, Table* table)
-    : table_(table), context_(context), scanner_(table_->scan()) {};
+    : table_(table), context_(context), scanner_(table_->scan(context_.tx)) {};
 
 void SequentialScanOperator::init() {
 }

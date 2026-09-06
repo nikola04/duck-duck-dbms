@@ -258,6 +258,10 @@ std::optional<std::pair<RID, std::vector<std::byte>>> TableHeap::Scan::next() {
     return std::nullopt;
 }
 
+RID TableHeap::Scan::next_rid() const {
+    return current_rid_;
+}
+
 bool TableHeap::Scan::next_page() {
 
     if (current_page_ == nullptr)

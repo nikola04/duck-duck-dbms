@@ -2,6 +2,7 @@
 #include "duck/common/types.hpp"
 #include "duck/table/table_heap.hpp"
 #include "duck/transaction/lock_manager.hpp"
+#include "duck/transaction/transaction.hpp"
 #include "duck/transaction/undo.hpp"
 #include "duck/tuple/tuple.hpp"
 #include <cstddef>
@@ -108,11 +109,14 @@ std::pair<size_t, DropTableStatus> Table::drop_pages() {
     return {failed, DropTableStatus::SUCCESS};
 }
 
-Table::Scan Table::scan() const {
-    return Table::Scan{table_heap_.scan(), schema_};
+Table::Scan Table::scan(Transaction* tx) const {
+    return Table::Scan{table_heap_.scan(), schema_, lock_manager_, tx};
 }
 
 std::optional<std::pair<RID, Tuple>> Table::Scan::next() {
+    if (tx_ != nullptr && !lock_manager_.lock_shared(tx_, heap_scan_.next_rid()))
+        return std::nullopt;
+
     auto result{heap_scan_.next()};
     if (!result.has_value())
         return std::nullopt;
