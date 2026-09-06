@@ -1,4 +1,6 @@
 #include "duck/execution/operator/filter/filter.hpp"
+#include "duck/tuple/value.hpp"
+#include <cassert>
 #include <optional>
 
 namespace duck {
@@ -10,6 +12,8 @@ void FilterOperator::init() {
 std::optional<Record> FilterOperator::next() {
     while (auto record{child_->next()}) {
         auto comp{comparator_->evaluate(*record)};
+        assert(comp.type() == ValueType::BOOL);
+
         if (comp.is_null() || !comp.as_bool()) // skip unknwon and false
             continue;
 

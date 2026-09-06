@@ -89,6 +89,7 @@ add_library(duck_execution
     src/execution/expression/column.cpp
     src/execution/expression/comparison.cpp
     src/execution/expression/constant.cpp
+    src/execution/expression/logical.cpp
     src/execution/operator/scan/seq_scan.cpp
     src/execution/operator/filter/filter.cpp
 )

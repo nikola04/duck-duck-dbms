@@ -13,8 +13,6 @@ public:
                          std::unique_ptr<Expression> right_expr)
         : left_(std::move(left_expr)), right_(std::move(right_expr)), op_(op) {};
 
-    ~ComparisonExpression() = default;
-
     Value evaluate(const Record& record) const;
 
 private:

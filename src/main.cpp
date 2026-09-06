@@ -9,9 +9,9 @@
 #include "duck/execution/expression/column.hpp"
 #include "duck/execution/expression/comparison.hpp"
 #include "duck/execution/expression/constant.hpp"
+#include "duck/execution/expression/logical.hpp"
 #include "duck/execution/operator/filter/filter.hpp"
 #include "duck/execution/operator/scan/seq_scan.hpp"
-#include "duck/table/table.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/tuple.hpp"
 #include "duck/tuple/value.hpp"
@@ -44,12 +44,18 @@ int main() {
         duck::ExecutorContext context{tx.get()};
         // table->insert_tuple(new_tuple, tx.get());
 
-        auto comp_exp{std::make_unique<duck::ComparisonExpression>(
-            std::make_unique<duck::ColumnExpression>(1), duck::ComparisonOperator::LESS,
+        auto comp_g_exp{std::make_unique<duck::ComparisonExpression>(
+            std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::GREATER,
+            std::make_unique<duck::ConstantExpression>(duck::Value::of((uint32_t)100)))};
+        auto comp_l_exp{std::make_unique<duck::ComparisonExpression>(
+            std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::LESS,
             std::make_unique<duck::ConstantExpression>(duck::Value::of((uint32_t)500)))};
 
+        auto b_expr{std::make_unique<duck::BinaryExpression>(std::move(comp_g_exp), duck::BinaryOperator::AND,
+                                                             std::move(comp_l_exp))};
+
         auto scan_op{std::make_unique<duck::SequentialScanOperator>(context, table)};
-        auto filter_op{std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(comp_exp))};
+        auto filter_op{std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(b_expr))};
 
         duck::Executor executor{std::move(filter_op)};
 
