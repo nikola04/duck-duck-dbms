@@ -128,7 +128,7 @@ std::string Schema::to_string() const {
     return s;
 }
 
-Schema Schema::duplicate_schema(const Schema& schema, const std::vector<std::size_t>& column_idxs) {
+Schema Schema::projected(const Schema& schema, const std::vector<std::size_t>& column_idxs) {
     std::vector<Column> columns;
     columns.reserve(column_idxs.size());
 
@@ -136,7 +136,7 @@ Schema Schema::duplicate_schema(const Schema& schema, const std::vector<std::siz
         columns.push_back(schema.column(idx));
     }
 
-    return Schema{columns};
+    return Schema{std::move(columns)};
 }
 
 } // namespace duck

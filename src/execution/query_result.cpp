@@ -2,6 +2,8 @@
 
 namespace duck {
 
+QueryResult::QueryResult(std::unique_ptr<Operator> op) : root_(std::move(op)) {};
+
 std::optional<Record> QueryResult::next() {
     return root_->next();
 }

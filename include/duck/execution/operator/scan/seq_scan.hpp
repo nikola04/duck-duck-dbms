@@ -1,16 +1,16 @@
 #pragma once
 
-#include "duck/execution/executor_context.hpp"
 #include "duck/execution/operator/operator.hpp"
 #include "duck/execution/record.hpp"
 #include "duck/table/table.hpp"
+#include "duck/transaction/transaction.hpp"
 #include <optional>
 
 namespace duck {
 
 class SequentialScanOperator : public Operator {
 public:
-    explicit SequentialScanOperator(ExecutorContext& context, Table* table);
+    explicit SequentialScanOperator(Table* table, Transaction* tx);
 
     void init() override;
     std::optional<Record> next() override;
@@ -19,7 +19,7 @@ public:
 
 private:
     Table* table_;
-    ExecutorContext& context_;
+    Transaction* tx_;
 
     Table::Scan scanner_;
 };

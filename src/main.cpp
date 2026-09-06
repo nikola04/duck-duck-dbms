@@ -56,11 +56,11 @@ int main() {
         auto b_expr{std::make_unique<duck::BinaryExpression>(std::move(comp_g_exp), duck::BinaryOperator::AND,
                                                              std::move(comp_l_exp))};
 
-        auto scan_op{std::make_unique<duck::SequentialScanOperator>(context, table)};
+        auto scan_op{std::make_unique<duck::SequentialScanOperator>(table, context.tx)};
         auto filter_op{std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(b_expr))};
         auto proj_op{std::make_unique<duck::ProjectionOperator>(std::move(filter_op), std::vector<std::size_t>{0, 1})};
 
-        duck::Executor executor{std::move(proj_op)};
+        duck::Executor executor{std::move(proj_op), context};
 
         auto result{executor.execute()};
         std::println("Schema: {}", result.output_schema().to_string());

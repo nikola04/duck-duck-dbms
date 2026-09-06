@@ -46,7 +46,7 @@ public:
 
     std::string to_string() const; // debug method
 
-    static Schema duplicate_schema(const Schema& schema, const std::vector<std::size_t>& column_idxs);
+    static Schema projected(const Schema& schema, const std::vector<std::size_t>& column_idxs);
 
 private:
     std::vector<Column> columns_;
