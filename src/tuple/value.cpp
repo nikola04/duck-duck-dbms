@@ -77,6 +77,19 @@ std::uint32_t Value::as_uint32() const {
         throw std::runtime_error("Value::as_uint32: tried to read null value");
     return std::get<std::uint32_t>(data_);
 }
+std::int64_t Value::as_integral() const {
+    switch (type_) {
+    case ValueType::INT32:
+        return static_cast<std::int64_t>(as_int32());
+    case ValueType::UINT32:
+        return static_cast<std::int64_t>(as_uint32());
+    case ValueType::INT64:
+        return as_int64();
+
+    default:
+        throw std::runtime_error("Value::as_integral: is not a non-uint64 integral");
+    }
+}
 double Value::as_double() const {
     if (is_null_)
         throw std::runtime_error("Value::as_double: tried to read null value");

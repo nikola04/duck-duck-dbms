@@ -47,11 +47,12 @@ int main() {
         // table->insert_tuple(new_tuple, tx.get());
 
         auto comp_g_exp{std::make_unique<duck::ComparisonExpression>(
-            std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::GREATER,
-            std::make_unique<duck::ConstantExpression>(duck::Value::of((uint32_t)100)))};
+            std::make_unique<duck::ConstantExpression>(duck::Value::of(std::string("test string!"))),
+            duck::ComparisonOperator::GREATER_EQ,
+            std::make_unique<duck::ConstantExpression>(duck::Value::of(std::string("test string"))))};
         auto comp_l_exp{std::make_unique<duck::ComparisonExpression>(
             std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::LESS,
-            std::make_unique<duck::ConstantExpression>(duck::Value::of((uint32_t)500)))};
+            std::make_unique<duck::ConstantExpression>(duck::Value::of(233.000000001)))};
 
         auto b_expr{std::make_unique<duck::BinaryExpression>(std::move(comp_g_exp), duck::BinaryOperator::AND,
                                                              std::move(comp_l_exp))};

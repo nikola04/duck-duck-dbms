@@ -63,6 +63,7 @@ public:
     std::uint64_t as_uint64() const;
     std::int32_t as_int32() const;
     std::uint32_t as_uint32() const;
+    std::int64_t as_integral() const;
     double as_double() const;
     float as_float() const;
     bool as_bool() const;
