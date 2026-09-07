@@ -11,6 +11,8 @@ Layered, bottom-up:
 - **`duck_tuple`** — `SlottedPage` (on-disk page layout for variable-length tuples), `Value`/`Schema`/`Column`/`Tuple` (typed row representation with serialization to/from raw bytes, NULL bitmap, fixed vs. variable-length column handling).
 - **`duck_table`** — `TableHeap` (multi-page tuple storage with page-chain traversal), `Table` (schema-aware wrapper over `TableHeap`), cursor-style `Scan` for sequential iteration.
 - **`duck_catalog`** — `Catalog`: persistent table registry. Bootstraps itself as an ordinary table (via `TableHeap`) rooted at a fixed, well-known page id, storing `{table_name, first_page_id, schema_bytes}` rows for every user-created table. On startup, scans its own page chain to reconstruct in-memory `Table` handles.
+- **`duck_transaction`** — `TransactionManager`/`Transaction`/`LockManager`: strict Two-Phase Locking (2PL) with row-level shared/exclusive locks, lock upgrade support, and a Write-Ahead-style undo log (`UndoRecord` hierarchy) for rollback on abort. `Table::InsertTuple`/`UpdateTuple`/`DeleteTuple` accept an optional `Transaction*` — `nullptr` means auto-commit (no locking, used internally by `Catalog` for DDL), a real transaction acquires row locks and records undo entries for rollback.
+- **`duck_execution`** — Volcano/iterator-model query execution: `Operator` base class (`SequentialScanOperator`, `FilterOperator`, `ProjectionOperator`), an `Expression` tree (`ConstantExpression`, `ColumnExpression`, `ComparisonExpression`, `BinaryExpression`/`UnaryExpression`) with SQL three-valued (TRUE/FALSE/NULL) logic, and `Executor`/`QueryResult` to drive an operator tree to completion. Query plans are currently built by hand (no parser yet).
 
 Each layer only depends on the one below it; concurrency guarantees (thread-safety, no data races) are verified independently at each layer under ThreadSanitizer.
 
@@ -25,10 +27,8 @@ Each layer only depends on the one below it; concurrency guarantees (thread-safe
 - **DiskManager is POSIX-only.** Uses `pread`/`pwrite` directly; no Windows (`ReadFile`/`WriteFile` + `OVERLAPPED`) backend.
 - **`reinterpret_cast` over raw page bytes (`PageHeader`, `Slot`) is technically in a strict-aliasing grey area** pre-C++23 `start_lifetime_as`. In practice this is the standard, universally-used approach for on-disk binary formats and works reliably on GCC/Clang for standard-layout structs, but it isn't formally guaranteed by the standard.
 - **Deadlock avoidance** is timeout-based (1s), not wait-for-graph detection
-
-- **RID-level locking currently does not protect deleted-slot reuse** by concurrent `INSERT` operations. An `INSERT` can reuse a slot belonging to another active transaction because the RID does not exist until after the tuple is inserted.
-  e.g. it is dangerous when transaction is rollbacking and another already inserted into that RID.
-  This should be fixed later by introducing page/slot-level locking or deferred slot reuse until the deleting transaction commits or aborts.
+- **RID-level locking currently does not protect deleted-slot reuse** by concurrent `INSERT` operations. An `INSERT` can reuse a slot belonging to another active transaction because the RID does not exist until after the tuple is inserted. This is dangerous if a transaction is rolling back while another has already inserted into that reused RID. A full fix requires page/slot-level locking or deferred slot reuse until the deleting transaction commits or aborts.
+- **`Table::Scan::next()` locks the upcoming RID before confirming one exists**, when a transaction is attached. A fix would check the underlying `TableHeap::Scan` for remaining tuples before requesting a lock, but because it requires only a shared lock and probably wont ever wait on that rid because there is no data that will request X lock currently this offers most reliable performance.
 
 ## License
 
