@@ -127,8 +127,10 @@ if(DUCK_BUILD_TESTS)
       test/catalog/catalog_drop_table_test.cpp
       test/transaction/transaction_lock_test.cpp
       test/transaction/transaction_rollback_test.cpp
+      test/execution/executor_test.cpp
+      test/execution/expressions_test.cpp
   )
-  target_link_libraries(duck_tests PRIVATE duck_database GTest::gtest_main)
+  target_link_libraries(duck_tests PRIVATE duck_execution GTest::gtest_main)
   include(GoogleTest)
   gtest_discover_tests(duck_tests)
 endif()
