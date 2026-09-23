@@ -13,6 +13,7 @@
 #include "duck/execution/operator/filter/filter.hpp"
 #include "duck/execution/operator/projection/projection.hpp"
 #include "duck/execution/operator/scan/seq_scan.hpp"
+#include "duck/query/select_query.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/tuple.hpp"
 #include "duck/tuple/value.hpp"

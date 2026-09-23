@@ -97,10 +97,25 @@ add_library(duck_execution
 target_include_directories(duck_execution PUBLIC include)
 target_link_libraries(duck_execution PUBLIC duck_database)
 
+# duck_planner
+add_library(duck_planner
+    src/plan/logical/node.cpp
+    src/plan/optimizer/optimizer.cpp
+)
+target_include_directories(duck_planner PUBLIC include)
+target_link_libraries(duck_planner PUBLIC duck_execution)
+
+# duck_query
+add_library(duck_query
+    src/query/select_query.cpp
+)
+target_include_directories(duck_query PUBLIC include)
+target_link_libraries(duck_query PUBLIC duck_planner)
+
 # --- executable ---
 add_executable(duck src/main.cpp)
 target_link_libraries(duck PRIVATE 
-    duck_execution
+    duck_query
 )
 
 # --- tests ---
