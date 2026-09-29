@@ -119,6 +119,7 @@ target_link_libraries(duck_planner PUBLIC duck_execution)
 add_library(duck_query
     src/query/select_query.cpp
     src/query/query_engine.cpp
+    src/query/binder.cpp
 )
 target_include_directories(duck_query PUBLIC include)
 target_link_libraries(duck_query PUBLIC duck_planner)
