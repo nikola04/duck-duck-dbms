@@ -1,5 +1,3 @@
-#pragma once
-
 #include "duck/plan/optimizer/optimizer.hpp"
 #include "duck/catalog/catalog.hpp"
 #include "duck/plan/logical/filter.hpp"

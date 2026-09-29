@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "duck/execution/expression/column.hpp"
-#include "duck/execution/expression/comparison.hpp"
-#include "duck/execution/expression/constant.hpp"
-#include "duck/execution/expression/logical.hpp"
-#include "duck/execution/record.hpp"
+#include "duck/expression/column.hpp"
+#include "duck/expression/comparison.hpp"
+#include "duck/expression/constant.hpp"
+#include "duck/expression/logical.hpp"
+#include "duck/record/record.hpp"
 
 #include <gtest/gtest.h>
 

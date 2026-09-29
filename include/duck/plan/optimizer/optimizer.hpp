@@ -8,7 +8,7 @@ namespace duck {
 
 class Optimizer {
 public:
-    Optimizer(Catalog& catalog);
+    explicit Optimizer(Catalog& catalog);
 
     std::unique_ptr<PhysicalPlanNode> optimize(std::unique_ptr<LogicalPlanNode> logical_plan) const;
 

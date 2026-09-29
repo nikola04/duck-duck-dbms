@@ -10,7 +10,7 @@ enum class LogicalNodeType {
 
 class LogicalPlanNode {
 public:
-    virtual ~LogicalPlanNode() = 0;
+    virtual ~LogicalPlanNode() = default;
 
     virtual LogicalNodeType type() const = 0;
     virtual const Schema& output_schema() const = 0;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "duck/execution/operator/operator.hpp"
-#include "duck/execution/record.hpp"
+#include "duck/record/record.hpp"
 #include "duck/table/table.hpp"
 #include "duck/transaction/transaction.hpp"
 #include <optional>

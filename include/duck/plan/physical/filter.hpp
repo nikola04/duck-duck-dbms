@@ -1,6 +1,6 @@
 #pragma once
 
-#include "duck/execution/expression/expression.hpp"
+#include "duck/expression/expression.hpp"
 #include "duck/plan/physical/node.hpp"
 #include <memory>
 
@@ -12,6 +12,9 @@ public:
 
     const PhysicalPlanNode& child() const;
     const Expression& predicate() const;
+
+    std::unique_ptr<PhysicalPlanNode> take_child();
+    std::unique_ptr<Expression> take_predicate();
 
     const Schema& output_schema() const override;
 

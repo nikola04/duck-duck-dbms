@@ -27,6 +27,10 @@ public:
     std::optional<Table*> get_table(const std::string& table_name) const;
     std::vector<Table*> all_tables() const;
 
+    Catalog& catalog() {
+        return catalog_;
+    }
+
 private:
     DiskManager disk_manager_;
     BufferPoolManager pool_;

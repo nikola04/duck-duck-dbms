@@ -1,6 +1,6 @@
 #pragma once
 
-#include "duck/execution/expression/expression.hpp"
+#include "duck/expression/expression.hpp"
 #include <cstddef>
 #include <memory>
 #include <string>

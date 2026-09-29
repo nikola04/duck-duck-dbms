@@ -1,6 +1,6 @@
 #pragma once
 
-#include "duck/execution/record.hpp"
+#include "duck/record/record.hpp"
 #include "duck/tuple/value.hpp"
 namespace duck {
 

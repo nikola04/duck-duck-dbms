@@ -1,4 +1,4 @@
-#include "duck/execution/expression/constant.hpp"
+#include "duck/expression/constant.hpp"
 
 namespace duck {
 

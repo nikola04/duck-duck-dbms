@@ -1,5 +1,5 @@
 #include "duck/execution/operator/scan/seq_scan.hpp"
-#include "duck/execution/record.hpp"
+#include "duck/record/record.hpp"
 #include <optional>
 
 namespace duck {

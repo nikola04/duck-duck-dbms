@@ -1,7 +1,7 @@
 #pragma once
 
-#include "duck/execution/expression/expression.hpp"
 #include "duck/execution/operator/operator.hpp"
+#include "duck/expression/expression.hpp"
 #include <memory>
 
 namespace duck {

@@ -5,7 +5,7 @@ namespace duck {
 
 class PhysicalPlanNode {
 public:
-    virtual ~PhysicalPlanNode() = 0;
+    virtual ~PhysicalPlanNode() = default;
 
     virtual const Schema& output_schema() const = 0;
 };

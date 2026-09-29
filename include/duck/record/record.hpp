@@ -3,6 +3,7 @@
 #include "duck/tuple/value.hpp"
 #include <cstddef>
 #include <vector>
+
 namespace duck {
 
 class Record {

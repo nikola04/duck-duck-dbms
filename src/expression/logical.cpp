@@ -1,4 +1,4 @@
-#include "duck/execution/expression/logical.hpp"
+#include "duck/expression/logical.hpp"
 #include "duck/tuple/value.hpp"
 
 namespace duck {

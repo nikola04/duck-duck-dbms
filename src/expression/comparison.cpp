@@ -1,5 +1,5 @@
-#include "duck/execution/expression/comparison.hpp"
-#include "duck/execution/record.hpp"
+#include "duck/expression/comparison.hpp"
+#include "duck/record/record.hpp"
 #include "duck/tuple/value.hpp"
 #include <cmath>
 #include <cstdint>

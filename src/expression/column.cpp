@@ -1,4 +1,4 @@
-#include "duck/execution/expression/column.hpp"
+#include "duck/expression/column.hpp"
 
 namespace duck {
 

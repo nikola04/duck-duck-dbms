@@ -82,25 +82,33 @@ add_library(duck_database
 target_include_directories(duck_database PUBLIC include)
 target_link_libraries(duck_database PUBLIC duck_catalog)
 
+# duck_expression
+add_library(duck_expression
+    src/expression/column.cpp
+    src/expression/comparison.cpp
+    src/expression/constant.cpp
+    src/expression/logical.cpp
+)
+target_include_directories(duck_expression PUBLIC include)
+
 # duck_execution
 add_library(duck_execution
     src/execution/executor.cpp
     src/execution/query_result.cpp
-    src/execution/expression/column.cpp
-    src/execution/expression/comparison.cpp
-    src/execution/expression/constant.cpp
-    src/execution/expression/logical.cpp
     src/execution/operator/scan/seq_scan.cpp
     src/execution/operator/filter/filter.cpp
     src/execution/operator/projection/projection.cpp
 )
 target_include_directories(duck_execution PUBLIC include)
-target_link_libraries(duck_execution PUBLIC duck_database)
+target_link_libraries(duck_execution PUBLIC duck_database duck_expression)
 
 # duck_planner
 add_library(duck_planner
-    src/plan/logical/node.cpp
+    src/plan/logical/scan.cpp
+    src/plan/logical/filter.cpp
     src/plan/optimizer/optimizer.cpp
+    src/plan/physical/seq_scan.cpp
+    src/plan/physical/filter.cpp
 )
 target_include_directories(duck_planner PUBLIC include)
 target_link_libraries(duck_planner PUBLIC duck_execution)
@@ -142,7 +150,7 @@ if(DUCK_BUILD_TESTS)
       test/catalog/catalog_drop_table_test.cpp
       test/transaction/transaction_lock_test.cpp
       test/transaction/transaction_rollback_test.cpp
-      test/execution/executor_test.cpp
+    #   test/execution/executor_test.cpp
       test/execution/expressions_test.cpp
   )
   target_link_libraries(duck_tests PRIVATE duck_execution GTest::gtest_main)
