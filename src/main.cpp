@@ -14,6 +14,8 @@
 #include "duck/plan/logical/projection.hpp"
 #include "duck/plan/logical/scan.hpp"
 #include "duck/plan/optimizer/optimizer.hpp"
+#include "duck/query/query_engine.hpp"
+#include "duck/query/select_query.hpp"
 #include "duck/tuple/schema.hpp"
 #include "duck/tuple/value.hpp"
 #include <cstddef>
@@ -39,7 +41,7 @@ int main() {
         // std::vector<duck::Value> values{duck::Value::of((uint32_t)233), duck::Value::of(std::string("Sava"))};
         // auto new_tuple{duck::Tuple{values, schema}};
 
-        auto table{*db.get_table("test_table3")};
+        // auto table{*db.get_table("test_table3")};
         auto tx{db.begin_tx()};
 
         duck::ExecutorContext context{tx.get()};
@@ -63,14 +65,12 @@ int main() {
 
         duck::Optimizer optimizer{db.catalog()};
 
-        auto scan{std::make_unique<duck::LogicalScan>(*table)};
-        auto filter{std::make_unique<duck::LogicalFilterPlan>(std::move(scan), std::move(b_expr))};
-        auto projection{std::make_unique<duck::LogicalProjection>(std::move(filter), std::vector<std::size_t>{1, 0})};
+        auto query{std::make_unique<duck::SelectQuery>(std::vector<std::size_t>{1})};
+        (*query).from("test_table3").where(std::move(b_expr));
 
-        auto ph_plan{optimizer.optimize(std::move(projection))};
+        duck::QueryEngine engine{db.catalog()};
 
-        duck::Executor executor{context};
-        auto result{executor.execute(*ph_plan)};
+        auto result{engine.execute(std::move(query), context)};
 
         std::println("Schema: {}", result.output_schema().to_string());
         while (auto entry = result.next()) {

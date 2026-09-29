@@ -118,6 +118,7 @@ target_link_libraries(duck_planner PUBLIC duck_execution)
 # duck_query
 add_library(duck_query
     src/query/select_query.cpp
+    src/query/query_engine.cpp
 )
 target_include_directories(duck_query PUBLIC include)
 target_link_libraries(duck_query PUBLIC duck_planner)
@@ -152,10 +153,11 @@ if(DUCK_BUILD_TESTS)
       test/catalog/catalog_drop_table_test.cpp
       test/transaction/transaction_lock_test.cpp
       test/transaction/transaction_rollback_test.cpp
-    #   test/execution/executor_test.cpp
+      test/execution/executor_test.cpp
       test/execution/expressions_test.cpp
+      test/plan/optimizer_test.cpp
   )
-  target_link_libraries(duck_tests PRIVATE duck_execution GTest::gtest_main)
+  target_link_libraries(duck_tests PRIVATE duck_planner GTest::gtest_main)
   include(GoogleTest)
   gtest_discover_tests(duck_tests)
 endif()

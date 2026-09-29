@@ -1,6 +1,7 @@
 #pragma once
 
 #include "duck/expression/expression.hpp"
+#include "duck/query/query.hpp"
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -8,15 +9,15 @@
 
 namespace duck {
 
-class SelectQuery {
+class SelectQuery : public Query {
 public:
-    SelectQuery& select(std::vector<std::size_t> columns);
+    SelectQuery();
+    SelectQuery(std::vector<std::size_t> columns);
+
     SelectQuery& from(std::string_view table);
     SelectQuery& where(std::unique_ptr<Expression> predicate);
 
-    const std::vector<std::size_t>& columns() const;
-    const std::string table() const;
-    const Expression* predicate() const;
+    std::unique_ptr<LogicalPlanNode> build_plan(Catalog& catalog) override;
 
 private:
     std::vector<std::size_t> columns_;
