@@ -6,16 +6,18 @@
 #include "duck/database/database.hpp"
 #include "duck/execution/executor.hpp"
 #include "duck/execution/executor_context.hpp"
-#include "duck/execution/operator/filter/filter.hpp"
-#include "duck/execution/operator/projection/projection.hpp"
-#include "duck/execution/operator/scan/seq_scan.hpp"
 #include "duck/expression/column.hpp"
 #include "duck/expression/comparison.hpp"
 #include "duck/expression/constant.hpp"
+#include "duck/plan/logical/filter.hpp"
+#include "duck/plan/logical/projection.hpp"
+#include "duck/plan/logical/scan.hpp"
+#include "duck/plan/optimizer/optimizer.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 
 #include <cstdio>
+#include <memory>
 #include <gtest/gtest.h>
 
 namespace {
@@ -65,16 +67,22 @@ TEST_F(ExecutorIntegrationTest, ScanFilterProjectionReturnsExpectedRows) {
         std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::GREATER_EQ,
         std::make_unique<duck::ConstantExpression>(duck::Value::of(std::int32_t{2})));
 
-    auto scan_op = std::make_unique<duck::SequentialScanOperator>(table, context.tx);
-    auto filter_op = std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(filter_expr));
-    auto proj_op = std::make_unique<duck::ProjectionOperator>(std::move(filter_op), std::vector<std::size_t>{0, 1});
+    auto scan = std::make_unique<duck::LogicalScan>(*table);
+    auto filter = std::make_unique<duck::LogicalFilterPlan>(std::move(scan), std::move(filter_expr));
+    // Projection is above the filter, so the predicate still sees the original scan schema.
+    auto projection = std::make_unique<duck::LogicalProjection>(std::move(filter), std::vector<std::size_t>{1});
 
-    duck::Executor executor{std::move(proj_op), context};
-    auto result = executor.execute();
+    duck::Optimizer optimizer{db.catalog()};
+    auto physical_plan = optimizer.optimize(std::move(projection));
 
+    duck::Executor executor{context};
+    auto result = executor.execute(*physical_plan);
+
+    ASSERT_EQ(result.output_schema().column_count(), 1u);
     int count = 0;
     while (auto record = result.next()) {
-        EXPECT_GE(record->get(0).as_int32(), 2);
+        ASSERT_EQ(record->size(), 1u);
+        EXPECT_EQ(record->get(0).as_string(), "person" + std::to_string(count + 2));
         ++count;
     }
     EXPECT_EQ(count, 3); // ids 2, 3, 4
@@ -96,12 +104,15 @@ TEST_F(ExecutorIntegrationTest, ProjectionReordersAndSubsetsColumns) {
     auto scan_txn = db.begin_tx();
     duck::ExecutorContext context{scan_txn.get()};
 
-    auto scan_op = std::make_unique<duck::SequentialScanOperator>(table, context.tx);
-    // Project only column 1 (name), dropping column 0
-    auto proj_op = std::make_unique<duck::ProjectionOperator>(std::move(scan_op), std::vector<std::size_t>{1});
+    auto scan = std::make_unique<duck::LogicalScan>(*table);
+    // Project only column 1 (name), dropping column 0.
+    auto projection = std::make_unique<duck::LogicalProjection>(std::move(scan), std::vector<std::size_t>{1});
 
-    duck::Executor executor{std::move(proj_op), context};
-    auto result = executor.execute();
+    duck::Optimizer optimizer{db.catalog()};
+    auto physical_plan = optimizer.optimize(std::move(projection));
+
+    duck::Executor executor{context};
+    auto result = executor.execute(*physical_plan);
 
     ASSERT_EQ(result.output_schema().column_count(), 1u);
 
@@ -131,11 +142,14 @@ TEST_F(ExecutorIntegrationTest, FilterWithNoMatchesReturnsEmptyResult) {
         std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::GREATER,
         std::make_unique<duck::ConstantExpression>(duck::Value::of(std::int32_t{999})));
 
-    auto scan_op = std::make_unique<duck::SequentialScanOperator>(table, context.tx);
-    auto filter_op = std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(filter_expr));
+    auto scan = std::make_unique<duck::LogicalScan>(*table);
+    auto filter = std::make_unique<duck::LogicalFilterPlan>(std::move(scan), std::move(filter_expr));
 
-    duck::Executor executor{std::move(filter_op), context};
-    auto result = executor.execute();
+    duck::Optimizer optimizer{db.catalog()};
+    auto physical_plan = optimizer.optimize(std::move(filter));
+
+    duck::Executor executor{context};
+    auto result = executor.execute(*physical_plan);
 
     EXPECT_FALSE(result.next().has_value());
 
