@@ -2,9 +2,11 @@
 #include "duck/catalog/catalog.hpp"
 #include "duck/plan/logical/filter.hpp"
 #include "duck/plan/logical/node.hpp"
+#include "duck/plan/logical/projection.hpp"
 #include "duck/plan/logical/scan.hpp"
 #include "duck/plan/physical/filter.hpp"
 #include "duck/plan/physical/node.hpp"
+#include "duck/plan/physical/projection.hpp"
 #include "duck/plan/physical/seq_scan.hpp"
 #include <memory>
 #include <stdexcept>
@@ -25,6 +27,14 @@ std::unique_ptr<PhysicalPlanNode> Optimizer::optimize(std::unique_ptr<LogicalPla
         auto child{optimize(filter.take_child())};
 
         return std::make_unique<PhysicalFilterPlan>(std::move(child), filter.take_predicate());
+    }
+    case duck::LogicalNodeType::PROJECTION: {
+        auto& projection{static_cast<LogicalProjection&>(*logical_plan)};
+
+        auto child{optimize(projection.take_child())};
+
+        return std::make_unique<PhysicalProjectionPlan>(std::move(child), projection.take_columns(),
+                                                        projection.take_schema());
     }
     }
     throw std::runtime_error("Optimizer::optimize: LogicalNode type not found");

@@ -6,6 +6,7 @@ namespace duck {
 enum class LogicalNodeType {
     SCAN,
     FILTER,
+    PROJECTION,
 };
 
 class LogicalPlanNode {

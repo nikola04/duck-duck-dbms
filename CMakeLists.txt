@@ -106,9 +106,11 @@ target_link_libraries(duck_execution PUBLIC duck_database duck_expression)
 add_library(duck_planner
     src/plan/logical/scan.cpp
     src/plan/logical/filter.cpp
+    src/plan/logical/projection.cpp
     src/plan/optimizer/optimizer.cpp
     src/plan/physical/seq_scan.cpp
     src/plan/physical/filter.cpp
+    src/plan/physical/projection.cpp
 )
 target_include_directories(duck_planner PUBLIC include)
 target_link_libraries(duck_planner PUBLIC duck_execution)

@@ -10,6 +10,7 @@ namespace duck {
 class ProjectionOperator : public Operator {
 public:
     ProjectionOperator(std::unique_ptr<Operator> child, std::vector<std::size_t> columns);
+    ProjectionOperator(std::unique_ptr<Operator> child, std::vector<std::size_t> columns, Schema output_schema);
 
     void init() override;
     std::optional<Record> next() override;

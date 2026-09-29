@@ -6,22 +6,17 @@
 #include "duck/database/database.hpp"
 #include "duck/execution/executor.hpp"
 #include "duck/execution/executor_context.hpp"
-#include "duck/execution/operator/filter/filter.hpp"
-#include "duck/execution/operator/projection/projection.hpp"
-#include "duck/execution/operator/scan/seq_scan.hpp"
 #include "duck/expression/column.hpp"
 #include "duck/expression/comparison.hpp"
 #include "duck/expression/constant.hpp"
 #include "duck/expression/logical.hpp"
 #include "duck/plan/logical/filter.hpp"
+#include "duck/plan/logical/projection.hpp"
 #include "duck/plan/logical/scan.hpp"
 #include "duck/plan/optimizer/optimizer.hpp"
-#include "duck/query/select_query.hpp"
 #include "duck/tuple/schema.hpp"
-#include "duck/tuple/tuple.hpp"
 #include "duck/tuple/value.hpp"
 #include <cstddef>
-#include <cstdint>
 #include <exception>
 #include <iostream>
 #include <memory>
@@ -61,21 +56,25 @@ int main() {
         auto b_expr{std::make_unique<duck::BinaryExpression>(std::move(comp_g_exp), duck::BinaryOperator::AND,
                                                              std::move(comp_l_exp))};
 
-        // auto scan_op{std::make_unique<duck::SequentialScanOperator>(table, context.tx)};
         // auto filter_op{std::make_unique<duck::FilterOperator>(std::move(scan_op), std::move(b_expr))};
         // auto proj_op{std::make_unique<duck::ProjectionOperator>(std::move(filter_op), std::vector<std::size_t>{0,
         // 1})};
+        // std::make_unique<duck::LogicalFilterPlan>(std::move(scan), std::move(b_expr))
 
         duck::Optimizer optimizer{db.catalog()};
+
         auto scan{std::make_unique<duck::LogicalScan>(*table)};
-        auto ph_plan{optimizer.optimize(std::make_unique<duck::LogicalFilterPlan>(std::move(scan), std::move(b_expr)))};
+        auto filter{std::make_unique<duck::LogicalFilterPlan>(std::move(scan), std::move(b_expr))};
+        auto projection{std::make_unique<duck::LogicalProjection>(std::move(filter), std::vector<std::size_t>{1, 0})};
+
+        auto ph_plan{optimizer.optimize(std::move(projection))};
 
         duck::Executor executor{context};
         auto result{executor.execute(*ph_plan)};
 
         std::println("Schema: {}", result.output_schema().to_string());
         while (auto entry = result.next()) {
-            std::println("Entry: {} | {}", entry->get(0).to_string(), entry->get(1).to_string());
+            std::println("Entry: {} | {}", entry->get(0).to_string(), nullptr); // entry->get(1).to_string());
         }
 
         // table->update_tuple({2, 1}, new_tuple, tx.get());

@@ -11,6 +11,10 @@ ProjectionOperator::ProjectionOperator(std::unique_ptr<Operator> child, std::vec
     : child_(std::move(child)), columns_(std::move(columns)),
       schema_(Schema::projected(child_->output_schema(), columns_)) {};
 
+ProjectionOperator::ProjectionOperator(std::unique_ptr<Operator> child, std::vector<std::size_t> columns,
+                                       Schema output_schema)
+    : child_(std::move(child)), columns_(std::move(columns)), schema_(output_schema) {};
+
 void ProjectionOperator::init() {
     child_->init();
 }
