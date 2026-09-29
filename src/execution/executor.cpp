@@ -1,9 +1,11 @@
 #include "duck/execution/executor.hpp"
 #include "duck/execution/operator/filter/filter.hpp"
+#include "duck/execution/operator/limit/limit.hpp"
 #include "duck/execution/operator/projection/projection.hpp"
 #include "duck/execution/operator/scan/seq_scan.hpp"
 #include "duck/execution/query_result.hpp"
 #include "duck/plan/physical/filter.hpp"
+#include "duck/plan/physical/limit.hpp"
 #include "duck/plan/physical/projection.hpp"
 #include "duck/plan/physical/seq_scan.hpp"
 #include <memory>
@@ -37,6 +39,13 @@ std::unique_ptr<Operator> Executor::build(PhysicalPlanNode& plan) {
 
         return std::make_unique<ProjectionOperator>(std::move(child), std::move(columns),
                                                     projection_plan->take_schema());
+    }
+
+    if (auto* limit_plan{dynamic_cast<PhysicalLimitPlan*>(&plan)}; limit_plan != nullptr) {
+        auto child_plan{limit_plan->take_child()};
+        auto child{build(*child_plan)};
+
+        return std::make_unique<LimitOperator>(std::move(child), limit_plan->limit());
     }
 
     throw std::runtime_error("Executor::build: unsupported physical plan node");

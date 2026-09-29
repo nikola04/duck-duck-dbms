@@ -5,9 +5,7 @@
 
 #include "duck/database/database.hpp"
 #include "duck/execution/executor_context.hpp"
-#include "duck/expression/column.hpp"
 #include "duck/expression/comparison.hpp"
-#include "duck/expression/constant.hpp"
 #include "duck/expression/logical.hpp"
 #include "duck/query/query_engine.hpp"
 #include "duck/query/select_query.hpp"
@@ -18,19 +16,19 @@
 
 int main() {
     try {
-        auto comp_g_exp{std::make_unique<duck::ComparisonExpression>(
-            std::make_unique<duck::ConstantExpression>(duck::Value::of(std::string("test string!"))),
+        auto comp_g_exp{std::make_unique<duck::UnboundComparisonExpression>(
+            std::make_unique<duck::UnboundConstantExpression>(duck::Value::of(std::string("test string!"))),
             duck::ComparisonOperator::GREATER_EQ,
-            std::make_unique<duck::ConstantExpression>(duck::Value::of(std::string("test string"))))};
-        auto comp_l_exp{std::make_unique<duck::ComparisonExpression>(
-            std::make_unique<duck::ColumnExpression>(0), duck::ComparisonOperator::LESS,
-            std::make_unique<duck::ConstantExpression>(duck::Value::of(233.000000001)))};
+            std::make_unique<duck::UnboundConstantExpression>(duck::Value::of(std::string("test string"))))};
+        auto comp_l_exp{std::make_unique<duck::UnboundComparisonExpression>(
+            std::make_unique<duck::UnboundColumnExpression>("id"), duck::ComparisonOperator::LESS,
+            std::make_unique<duck::UnboundConstantExpression>(duck::Value::of(233.000000001)))};
 
-        auto b_expr{std::make_unique<duck::BinaryExpression>(std::move(comp_g_exp), duck::BinaryOperator::AND,
-                                                             std::move(comp_l_exp))};
+        auto b_expr{std::make_unique<duck::UnboundBinaryExpression>(std::move(comp_g_exp), duck::BinaryOperator::AND,
+                                                                    std::move(comp_l_exp))};
 
         auto query{duck::SelectQuery{std::vector<std::string>{"username", "id"}}};
-        query.from("test_table3").where(std::move(b_expr));
+        query.from("test_table3").where(std::move(b_expr)).limit(1);
 
         duck::Database db{"test.db"};
 

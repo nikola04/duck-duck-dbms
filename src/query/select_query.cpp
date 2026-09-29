@@ -13,8 +13,13 @@ SelectQuery& SelectQuery::from(std::string_view table) {
     return *this;
 }
 
-SelectQuery& SelectQuery::where(std::unique_ptr<Expression> predicate) {
+SelectQuery& SelectQuery::where(std::unique_ptr<UnboundExpression> predicate) {
     predicate_ = std::move(predicate);
+    return *this;
+}
+
+SelectQuery& SelectQuery::limit(std::size_t limit) {
+    limit_ = limit;
     return *this;
 }
 

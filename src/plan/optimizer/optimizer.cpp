@@ -1,10 +1,12 @@
 #include "duck/plan/optimizer/optimizer.hpp"
 #include "duck/catalog/catalog.hpp"
 #include "duck/plan/logical/filter.hpp"
+#include "duck/plan/logical/limit.hpp"
 #include "duck/plan/logical/node.hpp"
 #include "duck/plan/logical/projection.hpp"
 #include "duck/plan/logical/scan.hpp"
 #include "duck/plan/physical/filter.hpp"
+#include "duck/plan/physical/limit.hpp"
 #include "duck/plan/physical/node.hpp"
 #include "duck/plan/physical/projection.hpp"
 #include "duck/plan/physical/seq_scan.hpp"
@@ -35,6 +37,13 @@ std::unique_ptr<PhysicalPlanNode> Optimizer::optimize(std::unique_ptr<LogicalPla
 
         return std::make_unique<PhysicalProjectionPlan>(std::move(child), projection.take_columns(),
                                                         projection.take_schema());
+    }
+    case LogicalNodeType::LIMIT: {
+        auto& limit{static_cast<LogicalLimit&>(*logical_plan)};
+
+        auto child{optimize(limit.take_child())};
+
+        return std::make_unique<PhysicalLimitPlan>(std::move(child), limit.limit());
     }
     }
     throw std::runtime_error("Optimizer::optimize: LogicalNode type not found");

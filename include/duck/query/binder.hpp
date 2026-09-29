@@ -1,7 +1,9 @@
 #pragma once
 
 #include "duck/catalog/catalog.hpp"
+#include "duck/expression/expression.hpp"
 #include "duck/plan/logical/node.hpp"
+#include "duck/query/expression.hpp"
 #include "duck/query/select_query.hpp"
 #include <memory>
 
@@ -14,6 +16,9 @@ public:
     std::unique_ptr<LogicalPlanNode> bind(SelectQuery& select_query);
 
 private:
+    std::unique_ptr<Expression> bind_expression(std::unique_ptr<UnboundExpression> expression,
+                                                const Schema& schema);
+
     Catalog& catalog_;
 };
 

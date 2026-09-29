@@ -98,6 +98,7 @@ add_library(duck_execution
     src/execution/operator/scan/seq_scan.cpp
     src/execution/operator/filter/filter.cpp
     src/execution/operator/projection/projection.cpp
+    src/execution/operator/limit/limit.cpp
 )
 target_include_directories(duck_execution PUBLIC include)
 target_link_libraries(duck_execution PUBLIC duck_database duck_expression)
@@ -107,10 +108,12 @@ add_library(duck_planner
     src/plan/logical/scan.cpp
     src/plan/logical/filter.cpp
     src/plan/logical/projection.cpp
+    src/plan/logical/limit.cpp
     src/plan/optimizer/optimizer.cpp
     src/plan/physical/seq_scan.cpp
     src/plan/physical/filter.cpp
     src/plan/physical/projection.cpp
+    src/plan/physical/limit.cpp
 )
 target_include_directories(duck_planner PUBLIC include)
 target_link_libraries(duck_planner PUBLIC duck_execution)
@@ -157,8 +160,9 @@ if(DUCK_BUILD_TESTS)
       test/execution/executor_test.cpp
       test/execution/expressions_test.cpp
       test/plan/optimizer_test.cpp
+      test/query/binder_test.cpp
   )
-  target_link_libraries(duck_tests PRIVATE duck_planner GTest::gtest_main)
+  target_link_libraries(duck_tests PRIVATE duck_query GTest::gtest_main)
   include(GoogleTest)
   gtest_discover_tests(duck_tests)
 endif()
