@@ -1,9 +1,11 @@
 #include "duck/catalog/catalog.hpp"
 #include "duck/buffer/pool_manager.hpp"
+#include "duck/common/rid.hpp"
 #include "duck/common/types.hpp"
 #include "duck/config/defaults.hpp"
 #include "duck/table/table.hpp"
 #include "duck/table/table_heap.hpp"
+#include "duck/transaction/transaction.hpp"
 #include "duck/transaction/undo.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
@@ -67,14 +69,28 @@ Table* Catalog::create_table(const std::string name, Schema schema, Transaction*
     return result;
 }
 
-bool Catalog::drop_table(const std::string& name) {
-    std::unique_lock<std::shared_mutex> lock{latch_};
+bool Catalog::drop_table(const std::string& name, Transaction* tx) {
+    // find phase - find rid and gain tx exclusive lock
+    std::shared_lock<std::shared_mutex> sh_lock{latch_};
 
-    auto it{tables_.find(name)};
-    if (it == tables_.end())
+    RID rid;
+    if (auto it{tables_.find(name)}; it != tables_.end())
+        rid = it->second.rid;
+    else
         return false;
 
-    if (auto deleted{catalog_table_.delete_tuple(it->second.rid)}; !deleted) {
+    sh_lock.unlock();
+    if (tx != nullptr && !lock_manager_.lock_exclusive(tx, rid)) {
+        return false;
+    }
+
+    // deleting phase - acquire exclusive mutex and delete
+    std::unique_lock<std::shared_mutex> lock{latch_};
+    auto it{tables_.find(name)};
+    if (it == tables_.end() || it->second.rid != rid)
+        return false;
+
+    if (auto deleted{catalog_table_.delete_tuple(rid)}; !deleted) {
         return false;
     }
 
@@ -91,10 +107,13 @@ bool Catalog::drop_table(const std::string& name) {
 
     tables_.erase(it);
 
+    // if (tx != nullptr)
+    // tx->push_undo(...); // TODO: Drop Table UNDO, Dropped pages UNDO
+
     return true;
 }
 
-void Catalog::delete_table(const std::string name) {
+void Catalog::rollback_create_table(const std::string& name) {
     std::unique_lock<std::shared_mutex> lock{latch_};
 
     auto it{tables_.find(name)};
@@ -103,33 +122,61 @@ void Catalog::delete_table(const std::string name) {
     auto [failed_pages, drop_status]{it->second.table->drop_pages()};
     switch (drop_status) {
     case DropTableStatus::READ_PAGES_FAILED:
-        throw std::runtime_error("Catalog::delete_table: Table::drop_pages failed to fetch all pages before deletion");
+        throw std::runtime_error(
+            "Catalog::rollback_create_table: Table::drop_pages failed to fetch all pages before deletion");
     case DropTableStatus::SUCCESS:
         break;
     }
 
     if (failed_pages > 0)
-        std::println("Catalog::delete_table: failed to drop {} pages", failed_pages); // or log somewhere idk...
+        std::println("Catalog::rollback_create_table: failed to drop {} pages",
+                     failed_pages); // or log somewhere idk...
 
     tables_.erase(it);
 }
 
-std::optional<Table*> Catalog::get_table(const std::string& name) const {
+std::optional<Table*> Catalog::get_table(const std::string& name, Transaction* tx) const {
     std::shared_lock<std::shared_mutex> lock{latch_};
     if (auto it{tables_.find(name)}; it != tables_.end()) {
-        return it->second.table.get();
+        RID rid{it->second.rid};
+
+        lock.unlock();
+        if (tx != nullptr && !lock_manager_.lock_shared(tx, rid))
+            return std::nullopt;
+
+        lock.lock();
+        if (auto current{tables_.find(name)}; current != tables_.end() && current->second.rid == rid)
+            return current->second.table.get();
     }
     return std::nullopt;
 }
 
-std::vector<Table*> Catalog::all_tables() const {
+std::vector<Table*> Catalog::all_tables(Transaction* tx) const {
     std::shared_lock<std::shared_mutex> lock{latch_};
 
     std::vector<Table*> tables;
     tables.reserve(tables_.size());
 
-    for (auto& e : tables_)
-        tables.push_back(e.second.table.get());
+    // without transaction
+    if (tx == nullptr) {
+        for (const auto& e : tables_)
+            tables.push_back(e.second.table.get());
+
+        return tables;
+    }
+
+    // with transaction gain tx lock first
+    std::vector<std::pair<RID, Table*>> tables_with_refs;
+    tables_with_refs.reserve(tables_.size());
+
+    for (const auto& e : tables_)
+        tables_with_refs.push_back({e.second.rid, e.second.table.get()});
+
+    lock.unlock();
+
+    for (const auto& [rid, table_ptr] : tables_with_refs)
+        if (!lock_manager_.lock_shared(tx, rid))
+            throw std::runtime_error("Catalog::all_tables: failed to acquire lock for table");
 
     return tables;
 }

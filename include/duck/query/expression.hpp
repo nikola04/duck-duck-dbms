@@ -4,10 +4,20 @@
 #include "duck/expression/logical.hpp"
 #include "duck/tuple/value.hpp"
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
 namespace duck {
+
+struct ColumnRef {
+    ColumnRef(const char* name) : name(name) {}; // for testing
+    ColumnRef(std::string name) : name(std::move(name)) {};
+    ColumnRef(std::string qualifier, std::string name) : qualifier(std::move(qualifier)), name(std::move(name)) {};
+
+    std::optional<std::string> qualifier;
+    std::string name;
+};
 
 enum class UnboundExpressionType { COLUMN, CONSTANT, COMPARISON, BINARY, UNARY };
 
@@ -19,21 +29,31 @@ public:
 
 class UnboundColumnExpression : public UnboundExpression {
 public:
-    explicit UnboundColumnExpression(std::string name) : name_(std::move(name)) {}
+    explicit UnboundColumnExpression(ColumnRef ref) : ref_(std::move(ref)) {
+    }
 
-    const std::string& name() const { return name_; }
-    UnboundExpressionType type() const override { return UnboundExpressionType::COLUMN; }
+    const ColumnRef& ref() const {
+        return ref_;
+    }
+    UnboundExpressionType type() const override {
+        return UnboundExpressionType::COLUMN;
+    }
 
 private:
-    std::string name_;
+    ColumnRef ref_;
 };
 
 class UnboundConstantExpression : public UnboundExpression {
 public:
-    explicit UnboundConstantExpression(Value value) : value_(std::move(value)) {}
+    explicit UnboundConstantExpression(Value value) : value_(std::move(value)) {
+    }
 
-    const Value& value() const { return value_; }
-    UnboundExpressionType type() const override { return UnboundExpressionType::CONSTANT; }
+    const Value& value() const {
+        return value_;
+    }
+    UnboundExpressionType type() const override {
+        return UnboundExpressionType::CONSTANT;
+    }
 
 private:
     Value value_;
@@ -41,15 +61,23 @@ private:
 
 class UnboundComparisonExpression : public UnboundExpression {
 public:
-    UnboundComparisonExpression(std::unique_ptr<UnboundExpression> left,
-                                ComparisonOperator op,
+    UnboundComparisonExpression(std::unique_ptr<UnboundExpression> left, ComparisonOperator op,
                                 std::unique_ptr<UnboundExpression> right)
-        : left_(std::move(left)), op_(op), right_(std::move(right)) {}
+        : left_(std::move(left)), op_(op), right_(std::move(right)) {
+    }
 
-    std::unique_ptr<UnboundExpression> take_left() { return std::move(left_); }
-    std::unique_ptr<UnboundExpression> take_right() { return std::move(right_); }
-    ComparisonOperator op() const { return op_; }
-    UnboundExpressionType type() const override { return UnboundExpressionType::COMPARISON; }
+    std::unique_ptr<UnboundExpression> take_left() {
+        return std::move(left_);
+    }
+    std::unique_ptr<UnboundExpression> take_right() {
+        return std::move(right_);
+    }
+    ComparisonOperator op() const {
+        return op_;
+    }
+    UnboundExpressionType type() const override {
+        return UnboundExpressionType::COMPARISON;
+    }
 
 private:
     std::unique_ptr<UnboundExpression> left_;
@@ -59,15 +87,23 @@ private:
 
 class UnboundBinaryExpression : public UnboundExpression {
 public:
-    UnboundBinaryExpression(std::unique_ptr<UnboundExpression> left,
-                            BinaryOperator op,
+    UnboundBinaryExpression(std::unique_ptr<UnboundExpression> left, BinaryOperator op,
                             std::unique_ptr<UnboundExpression> right)
-        : left_(std::move(left)), op_(op), right_(std::move(right)) {}
+        : left_(std::move(left)), op_(op), right_(std::move(right)) {
+    }
 
-    std::unique_ptr<UnboundExpression> take_left() { return std::move(left_); }
-    std::unique_ptr<UnboundExpression> take_right() { return std::move(right_); }
-    BinaryOperator op() const { return op_; }
-    UnboundExpressionType type() const override { return UnboundExpressionType::BINARY; }
+    std::unique_ptr<UnboundExpression> take_left() {
+        return std::move(left_);
+    }
+    std::unique_ptr<UnboundExpression> take_right() {
+        return std::move(right_);
+    }
+    BinaryOperator op() const {
+        return op_;
+    }
+    UnboundExpressionType type() const override {
+        return UnboundExpressionType::BINARY;
+    }
 
 private:
     std::unique_ptr<UnboundExpression> left_;
@@ -78,11 +114,18 @@ private:
 class UnboundUnaryExpression : public UnboundExpression {
 public:
     UnboundUnaryExpression(std::unique_ptr<UnboundExpression> expression, UnaryOperator op)
-        : expression_(std::move(expression)), op_(op) {}
+        : expression_(std::move(expression)), op_(op) {
+    }
 
-    std::unique_ptr<UnboundExpression> take_expression() { return std::move(expression_); }
-    UnaryOperator op() const { return op_; }
-    UnboundExpressionType type() const override { return UnboundExpressionType::UNARY; }
+    std::unique_ptr<UnboundExpression> take_expression() {
+        return std::move(expression_);
+    }
+    UnaryOperator op() const {
+        return op_;
+    }
+    UnboundExpressionType type() const override {
+        return UnboundExpressionType::UNARY;
+    }
 
 private:
     std::unique_ptr<UnboundExpression> expression_;

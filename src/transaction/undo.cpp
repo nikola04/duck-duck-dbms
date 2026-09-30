@@ -24,7 +24,7 @@ DropTableUndoRecord::DropTableUndoRecord(Catalog* catalog, std::string name)
     : catalog_(catalog), name_(std::move(name)) {
 }
 void DropTableUndoRecord::undo() {
-    catalog_->delete_table(name_);
+    catalog_->rollback_create_table(name_);
 }
 
 } // namespace duck

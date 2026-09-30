@@ -3,9 +3,20 @@
 
 namespace duck {
 
-SelectQuery::SelectQuery() : columns_(0) {};
+SelectQuery::SelectQuery() = default;
 
-SelectQuery::SelectQuery(std::vector<std::string> columns) : columns_(std::move(columns)) {
+SelectQuery::SelectQuery(std::vector<ColumnRef> columns) {
+    this->columns(std::move(columns));
+}
+
+SelectQuery& SelectQuery::columns(std::vector<ColumnRef> columns) {
+    if (columns.size() == 1 && !columns.front().qualifier.has_value() && columns.front().name == "*") {
+        columns_.reset();
+        return *this;
+    }
+
+    columns_ = std::move(columns);
+    return *this;
 }
 
 SelectQuery& SelectQuery::from(std::string_view table) {

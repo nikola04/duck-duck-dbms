@@ -14,13 +14,14 @@ namespace duck {
 class SelectQuery : public Query {
 public:
     SelectQuery();
-    SelectQuery(std::vector<std::string> columns);
+    SelectQuery(std::vector<ColumnRef> columns);
 
+    SelectQuery& columns(std::vector<ColumnRef> columns);
     SelectQuery& from(std::string_view table);
     SelectQuery& where(std::unique_ptr<UnboundExpression> predicate);
     SelectQuery& limit(std::size_t limit);
 
-    const std::vector<std::string>& columns() const {
+    const std::optional<std::vector<ColumnRef>>& columns() const {
         return columns_;
     };
     const std::string& table() const {
@@ -34,7 +35,7 @@ public:
     }
 
 private:
-    std::vector<std::string> columns_;
+    std::optional<std::vector<ColumnRef>> columns_;
     std::string table_;
     std::unique_ptr<UnboundExpression> predicate_;
     std::optional<std::size_t> limit_;

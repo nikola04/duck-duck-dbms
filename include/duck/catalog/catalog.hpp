@@ -27,12 +27,12 @@ public:
     Catalog(BufferPoolManager& bpm, DiskManager& disk_manager, LockManager& lock_manager);
 
     Table* create_table(const std::string name, Schema schema, Transaction* tx = nullptr);
-    bool drop_table(const std::string& name);
+    bool drop_table(const std::string& name, Transaction* tx = nullptr);
 
-    void delete_table(const std::string name);
+    void rollback_create_table(const std::string& name);
 
-    std::optional<Table*> get_table(const std::string& name) const;
-    std::vector<Table*> all_tables() const;
+    std::optional<Table*> get_table(const std::string& name, Transaction* tx = nullptr) const;
+    std::vector<Table*> all_tables(Transaction* tx = nullptr) const;
 
 private:
     static const Schema catalog_schema_;

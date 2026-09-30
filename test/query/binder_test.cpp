@@ -4,7 +4,6 @@
  */
 
 #include "duck/database/database.hpp"
-#include "duck/execution/executor_context.hpp"
 #include "duck/query/expression.hpp"
 #include "duck/query/query_engine.hpp"
 #include "duck/query/select_query.hpp"
@@ -39,20 +38,20 @@ TEST(BinderTest, BindsColumnNamesInPredicate) {
         auto* table = db.create_table("people", schema, write_tx.get());
 
         for (int i = 0; i < 4; ++i) {
-            table->insert_tuple(
-                duck::Tuple({duck::Value::of(static_cast<std::int32_t>(i)),
-                             duck::Value::of(std::string("person") + std::to_string(i))},
-                            schema),
-                write_tx.get());
+            table->insert_tuple(duck::Tuple({duck::Value::of(static_cast<std::int32_t>(i)),
+                                             duck::Value::of(std::string("person") + std::to_string(i))},
+                                            schema),
+                                write_tx.get());
         }
         db.commit_tx(write_tx.get());
 
         auto read_tx = db.begin_tx();
-        duck::ExecutorContext context{read_tx.get()};
+        duck::QueryContext context{read_tx.get()};
 
         duck::SelectQuery query{{"name"}};
         query.from("people").where(std::make_unique<duck::UnboundComparisonExpression>(
-            std::make_unique<duck::UnboundColumnExpression>("id"), duck::ComparisonOperator::GREATER_EQ,
+            std::make_unique<duck::UnboundColumnExpression>(duck::ColumnRef{"id"}),
+            duck::ComparisonOperator::GREATER_EQ,
             std::make_unique<duck::UnboundConstantExpression>(duck::Value::of(std::int32_t{2}))));
 
         duck::QueryEngine engine{db.catalog()};
