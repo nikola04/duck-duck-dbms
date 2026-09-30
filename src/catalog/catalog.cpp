@@ -166,17 +166,27 @@ std::vector<Table*> Catalog::all_tables(Transaction* tx) const {
     }
 
     // with transaction gain tx lock first
-    std::vector<std::pair<RID, Table*>> tables_with_refs;
+    std::vector<std::pair<std::string, RID>> tables_with_refs;
     tables_with_refs.reserve(tables_.size());
 
-    for (const auto& e : tables_)
-        tables_with_refs.push_back({e.second.rid, e.second.table.get()});
+    for (const auto& [name, entry] : tables_)
+        tables_with_refs.push_back({name, entry.rid});
 
     lock.unlock();
 
-    for (const auto& [rid, table_ptr] : tables_with_refs)
+    for (const auto& [_t_name, rid] : tables_with_refs)
         if (!lock_manager_.lock_shared(tx, rid))
             throw std::runtime_error("Catalog::all_tables: failed to acquire lock for table");
+
+    lock.lock();
+
+    for (const auto& [t_name, rid] : tables_with_refs) {
+        if (auto it{tables_.find(t_name)}; it != tables_.end() && it->second.rid == rid)
+            tables.push_back(it->second.table.get());
+        else
+            throw std::runtime_error(
+                std::format("Catalog::all_tables: tables changed while acquiring lock for table {}", t_name));
+    }
 
     return tables;
 }
