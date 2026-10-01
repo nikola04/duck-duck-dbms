@@ -161,6 +161,7 @@ if(DUCK_BUILD_TESTS)
       test/transaction/transaction_lock_test.cpp
       test/transaction/transaction_rollback_test.cpp
       test/execution/executor_test.cpp
+      test/execution/nested_loop_join_test.cpp
       test/execution/expressions_test.cpp
       test/plan/optimizer_test.cpp
       test/query/binder_test.cpp
