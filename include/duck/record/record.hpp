@@ -28,7 +28,7 @@ public:
         return s;
     }
 
-    Record operator+(const Record& other) {
+    Record operator+(const Record& other) const {
         auto values{std::vector{this->values_}};
         values.insert(values.end(), other.values_.begin(), other.values_.end());
 
