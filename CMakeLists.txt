@@ -96,6 +96,7 @@ add_library(duck_execution
     src/execution/executor.cpp
     src/execution/query_result.cpp
     src/execution/operator/scan/seq_scan.cpp
+    src/execution/operator/join/nested_loop_join.cpp
     src/execution/operator/filter/filter.cpp
     src/execution/operator/projection/projection.cpp
     src/execution/operator/limit/limit.cpp

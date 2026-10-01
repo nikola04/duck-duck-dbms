@@ -13,6 +13,7 @@ public:
     ProjectionOperator(std::unique_ptr<Operator> child, std::vector<std::size_t> columns, Schema output_schema);
 
     void init() override;
+    void reset() override;
     std::optional<Record> next() override;
 
     const Schema& output_schema() const override;

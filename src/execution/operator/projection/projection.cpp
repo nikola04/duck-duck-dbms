@@ -18,6 +18,11 @@ ProjectionOperator::ProjectionOperator(std::unique_ptr<Operator> child, std::vec
 void ProjectionOperator::init() {
     child_->init();
 }
+
+void ProjectionOperator::reset() {
+    child_->reset();
+}
+
 std::optional<Record> ProjectionOperator::next() {
     if (auto record{child_->next()}; record.has_value()) {
         std::vector<Value> values;

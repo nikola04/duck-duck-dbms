@@ -9,6 +9,10 @@ void FilterOperator::init() {
     child_->init();
 }
 
+void FilterOperator::reset() {
+    child_->reset();
+}
+
 std::optional<Record> FilterOperator::next() {
     while (auto record{child_->next()}) {
         auto comp{comparator_->evaluate(*record)};

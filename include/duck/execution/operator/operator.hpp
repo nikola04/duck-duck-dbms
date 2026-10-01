@@ -11,6 +11,7 @@ public:
     virtual ~Operator() = default;
 
     virtual void init() = 0;
+    virtual void reset() = 0;
     virtual std::optional<Record> next() = 0;
 
     virtual const Schema& output_schema() const = 0;

@@ -1,10 +1,12 @@
 #include "duck/execution/executor.hpp"
 #include "duck/execution/operator/filter/filter.hpp"
+#include "duck/execution/operator/join/nested_loop_join.hpp"
 #include "duck/execution/operator/limit/limit.hpp"
 #include "duck/execution/operator/projection/projection.hpp"
 #include "duck/execution/operator/scan/seq_scan.hpp"
 #include "duck/execution/query_result.hpp"
 #include "duck/plan/physical/filter.hpp"
+#include "duck/plan/physical/join/nested_loop_join.hpp"
 #include "duck/plan/physical/limit.hpp"
 #include "duck/plan/physical/projection.hpp"
 #include "duck/plan/physical/scan/seq_scan.hpp"
@@ -22,6 +24,14 @@ QueryResult Executor::execute(PhysicalPlanNode& plan) {
 std::unique_ptr<Operator> Executor::build(PhysicalPlanNode& plan) {
     if (auto* scan_plan{dynamic_cast<SequentialScanPlan*>(&plan)}; scan_plan != nullptr) {
         return std::make_unique<SequentialScanOperator>(&scan_plan->table(), context_.tx);
+    }
+
+    if (auto* join_plan{dynamic_cast<NestedLoopJoinPlan*>(&plan)}; join_plan != nullptr) {
+        auto left{build(*join_plan->take_left())};
+        auto right{build(*join_plan->take_right())};
+
+        return std::make_unique<NestedLoopJoin>(std::move(left), std::move(right), join_plan->take_predicate(),
+                                                join_plan->take_schema());
     }
 
     if (auto* filter_plan{dynamic_cast<PhysicalFilterPlan*>(&plan)}; filter_plan != nullptr) {

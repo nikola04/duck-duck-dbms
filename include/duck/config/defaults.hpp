@@ -1,6 +1,7 @@
 #pragma once
 
 #include "duck/common/types.hpp"
+#include <cstddef>
 
 namespace duck {
 

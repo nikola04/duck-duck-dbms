@@ -12,6 +12,7 @@ public:
         : child_(std::move(child)), limit_(limit), produced_(0) {};
 
     void init() override;
+    void reset() override;
     std::optional<Record> next() override;
 
     const Schema& output_schema() const override;

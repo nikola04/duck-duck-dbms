@@ -12,6 +12,7 @@ public:
         : child_(std::move(child)), comparator_(std::move(comp)) {};
 
     void init() override;
+    void reset() override;
     std::optional<Record> next() override;
 
     const Schema& output_schema() const override;

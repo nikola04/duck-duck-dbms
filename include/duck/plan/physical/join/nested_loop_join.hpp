@@ -13,6 +13,11 @@ public:
         : left_(std::move(left)), right_(std::move(right)), predicate_(std::move(predicate)),
           schema_(std::move(schema)) {};
 
+    std::unique_ptr<PhysicalPlanNode> take_left();
+    std::unique_ptr<PhysicalPlanNode> take_right();
+    std::unique_ptr<Expression> take_predicate();
+    Schema take_schema();
+
     const Schema& output_schema() const override;
 
 private:
