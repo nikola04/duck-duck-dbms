@@ -12,6 +12,21 @@
 
 namespace duck {
 
+Schema::Schema(std::vector<Column> columns) : columns_(std::move(columns)) {
+    if (columns_.size() == 0)
+        throw std::runtime_error("Schema::Schema: tried to create schema with 0 columns");
+}
+
+std::optional<size_t> Schema::column_index(std::string_view name) const {
+    // TODO: consider caching column_index as unordered_map if profiling shows this as a bottleneck
+    for (std::size_t i = 0; i < columns_.size(); ++i) {
+        if (columns_[i].name() == name) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
 std::uint16_t Schema::fixed_size_of(size_t index) const {
     switch (const Column& column{this->column(index)}; column.type()) {
     case TypeId::INT64:
@@ -126,6 +141,19 @@ std::string Schema::to_string() const {
     }
 
     return s;
+}
+
+Schema Schema::operator+(const Schema& other) const {
+    std::vector<Column> columns;
+    columns.reserve(this->column_count() + other.column_count());
+
+    for (auto c : this->columns_)
+        columns.push_back(std::move(c));
+
+    for (auto c : other.columns_)
+        columns.push_back(std::move(c));
+
+    return Schema{columns};
 }
 
 Schema Schema::projected(const Schema& schema, const std::vector<std::size_t>& column_idxs) {

@@ -3,7 +3,7 @@
 #include "duck/tuple/schema.hpp"
 namespace duck {
 
-enum class LogicalNodeType { SCAN, FILTER, PROJECTION, LIMIT };
+enum class LogicalNodeType { SCAN, JOIN, FILTER, PROJECTION, LIMIT };
 
 class LogicalPlanNode {
 public:

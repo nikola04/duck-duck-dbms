@@ -48,11 +48,12 @@ TEST(BinderTest, BindsColumnNamesInPredicate) {
         auto read_tx = db.begin_tx();
         duck::QueryContext context{read_tx.get()};
 
-        duck::SelectQuery query{{"name"}};
-        query.from("people").where(std::make_unique<duck::UnboundComparisonExpression>(
-            std::make_unique<duck::UnboundColumnExpression>(duck::ColumnRef{"id"}),
-            duck::ComparisonOperator::GREATER_EQ,
-            std::make_unique<duck::UnboundConstantExpression>(duck::Value::of(std::int32_t{2}))));
+        duck::SelectQuery query{{std::string{"name"}}};
+        query.from({"people"})
+            .where(std::make_unique<duck::UnboundComparisonExpression>(
+                std::make_unique<duck::UnboundColumnExpression>(duck::ColumnRef{"id"}),
+                duck::ComparisonOperator::GREATER_EQ,
+                std::make_unique<duck::UnboundConstantExpression>(duck::Value::of(std::int32_t{2}))));
 
         duck::QueryEngine engine{db.catalog()};
         auto result = engine.execute(query, context);

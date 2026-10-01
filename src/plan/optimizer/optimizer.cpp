@@ -1,17 +1,20 @@
 #include "duck/plan/optimizer/optimizer.hpp"
 #include "duck/catalog/catalog.hpp"
 #include "duck/plan/logical/filter.hpp"
+#include "duck/plan/logical/join.hpp"
 #include "duck/plan/logical/limit.hpp"
 #include "duck/plan/logical/node.hpp"
 #include "duck/plan/logical/projection.hpp"
 #include "duck/plan/logical/scan.hpp"
 #include "duck/plan/physical/filter.hpp"
+#include "duck/plan/physical/join/nested_loop_join.hpp"
 #include "duck/plan/physical/limit.hpp"
 #include "duck/plan/physical/node.hpp"
 #include "duck/plan/physical/projection.hpp"
-#include "duck/plan/physical/seq_scan.hpp"
+#include "duck/plan/physical/scan/seq_scan.hpp"
 #include <memory>
 #include <stdexcept>
+
 namespace duck {
 
 Optimizer::Optimizer(Catalog& catalog) : catalog_(catalog) {};
@@ -22,6 +25,15 @@ std::unique_ptr<PhysicalPlanNode> Optimizer::optimize(std::unique_ptr<LogicalPla
         const auto& scan{static_cast<LogicalScan&>(*logical_plan)};
 
         return std::make_unique<SequentialScanPlan>(scan.table());
+    }
+    case LogicalNodeType::JOIN: {
+        auto& join{static_cast<LogicalJoin&>(*logical_plan)};
+
+        auto left{optimize(join.take_left())};
+        auto right{optimize(join.take_right())};
+
+        return std::make_unique<NestedLoopJoinPlan>(std::move(left), std::move(right), join.take_predicate(),
+                                                    join.take_schema());
     }
     case LogicalNodeType::FILTER: {
         auto& filter{static_cast<LogicalFilterPlan&>(*logical_plan)};

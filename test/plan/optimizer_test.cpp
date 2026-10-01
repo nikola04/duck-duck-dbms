@@ -13,7 +13,7 @@
 #include "duck/plan/optimizer/optimizer.hpp"
 #include "duck/plan/physical/filter.hpp"
 #include "duck/plan/physical/projection.hpp"
-#include "duck/plan/physical/seq_scan.hpp"
+#include "duck/plan/physical/scan/seq_scan.hpp"
 #include "duck/tuple/column.hpp"
 #include "duck/tuple/schema.hpp"
 

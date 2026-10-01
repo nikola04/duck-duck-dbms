@@ -27,7 +27,7 @@ int main() {
                                                                     std::move(comp_l_exp))};
 
         auto query{duck::SelectQuery{}};
-        query.columns({"username", "id"}).from("test_table3").where(std::move(b_expr)).limit(1);
+        query.columns({{"username"}, {"id"}}).from({"test_table3"}).where(std::move(b_expr)).limit(1);
 
         duck::Database db{"test.db"};
 

@@ -106,11 +106,13 @@ target_link_libraries(duck_execution PUBLIC duck_database duck_expression)
 # duck_planner
 add_library(duck_planner
     src/plan/logical/scan.cpp
+    src/plan/logical/join.cpp
     src/plan/logical/filter.cpp
     src/plan/logical/projection.cpp
     src/plan/logical/limit.cpp
     src/plan/optimizer/optimizer.cpp
-    src/plan/physical/seq_scan.cpp
+    src/plan/physical/scan/seq_scan.cpp
+    src/plan/physical/join/nested_loop_join.cpp
     src/plan/physical/filter.cpp
     src/plan/physical/projection.cpp
     src/plan/physical/limit.cpp

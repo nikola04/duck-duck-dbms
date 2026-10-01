@@ -7,7 +7,7 @@
 #include "duck/plan/physical/filter.hpp"
 #include "duck/plan/physical/limit.hpp"
 #include "duck/plan/physical/projection.hpp"
-#include "duck/plan/physical/seq_scan.hpp"
+#include "duck/plan/physical/scan/seq_scan.hpp"
 #include <memory>
 #include <stdexcept>
 

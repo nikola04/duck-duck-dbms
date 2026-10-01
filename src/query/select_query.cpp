@@ -1,9 +1,9 @@
 #include "duck/query/select_query.hpp"
+#include "duck/query/join.hpp"
+#include "duck/query/refs.hpp"
 #include <memory>
 
 namespace duck {
-
-SelectQuery::SelectQuery() = default;
 
 SelectQuery::SelectQuery(std::vector<ColumnRef> columns) {
     this->columns(std::move(columns));
@@ -19,7 +19,7 @@ SelectQuery& SelectQuery::columns(std::vector<ColumnRef> columns) {
     return *this;
 }
 
-SelectQuery& SelectQuery::from(std::string_view table) {
+SelectQuery& SelectQuery::from(TableRef table) {
     table_ = table;
     return *this;
 }
@@ -31,6 +31,11 @@ SelectQuery& SelectQuery::where(std::unique_ptr<UnboundExpression> predicate) {
 
 SelectQuery& SelectQuery::limit(std::size_t limit) {
     limit_ = limit;
+    return *this;
+}
+
+SelectQuery& SelectQuery::join(JoinClause clause) {
+    joins_.push_back(std::move(clause));
     return *this;
 }
 

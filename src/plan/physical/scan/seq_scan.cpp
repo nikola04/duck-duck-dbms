@@ -1,4 +1,4 @@
-#include "duck/plan/physical/seq_scan.hpp"
+#include "duck/plan/physical/scan/seq_scan.hpp"
 
 namespace duck {
 
