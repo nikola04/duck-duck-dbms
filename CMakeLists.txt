@@ -130,10 +130,19 @@ add_library(duck_query
 target_include_directories(duck_query PUBLIC include)
 target_link_libraries(duck_query PUBLIC duck_planner)
 
+# duck_sql
+add_library(duck_sql
+    src/sql/lexer.cpp
+    src/sql/parser.cpp
+)
+target_include_directories(duck_sql PUBLIC include)
+target_link_libraries(duck_sql PUBLIC duck_query)
+
+
 # --- executable ---
 add_executable(duck src/main.cpp)
 target_link_libraries(duck PRIVATE 
-    duck_query
+    duck_sql
 )
 
 # --- tests ---
